@@ -1,22 +1,21 @@
 # Mobbin MCP Server
 
-An MCP server that connects to [Mobbin](https://mobbin.com) — the design inspiration platform with 600k+ screens from 1,100+ apps. Search apps, browse screenshots, explore user flows, and access your saved collections directly from Claude.
+An un-offical MCP server that connects to [Mobbin](https://mobbin.com) — the design inspiration platform with 600k+ screens from 1,100+ apps. Search apps, browse screenshots, explore user flows, and access your saved collections directly from Claude.
 
 Mobbin has no public API. This server was built by reverse-engineering their internal endpoints using Playwright.
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `mobbin_search_apps` | Search and browse apps by category and platform |
-| `mobbin_search_screens` | Search screens by UI patterns, elements, or text content |
-| `mobbin_search_flows` | Search user flows by action type (e.g., onboarding, checkout) |
-| `mobbin_quick_search` | Fast autocomplete search for apps by name |
-| `mobbin_popular_apps` | Get popular apps grouped by category |
-| `mobbin_list_collections` | List your saved collections |
-| `mobbin_get_filters` | Get all available filter values (categories, patterns, elements, actions) |
-
-> **Note:** Screenshots and screenshot context are not yet available. Tools return metadata (app names, categories, URLs, etc.) but do not provide actual screenshot image content to the model.
+| Tool                       | Description                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| `mobbin_search_apps`       | Search and browse apps by category and platform                                              |
+| `mobbin_search_screens`    | Search screens by UI patterns, elements, or text content                                     |
+| `mobbin_search_flows`      | Search user flows by action type (e.g., onboarding, checkout)                                |
+| `mobbin_quick_search`      | Fast autocomplete search for apps by name                                                    |
+| `mobbin_popular_apps`      | Get popular apps grouped by category                                                         |
+| `mobbin_list_collections`  | List your saved collections                                                                  |
+| `mobbin_get_screen_detail` | Fetch a full screenshot image for a specific screen, with optional dominant color extraction |
+| `mobbin_get_filters`       | Get all available filter values (categories, patterns, elements, actions)                    |
 
 ## Setup
 
@@ -89,16 +88,18 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 ## Example prompts
 
-- "Search Mobbin for fintech apps on iOS"
-- "Find login screen designs across e-commerce apps"
-- "Show me onboarding flows for AI apps"
-- "What are the most popular apps on Mobbin right now?"
-- "Search for screens with a Card UI element in finance apps"
-- "List my saved collections"
+- "I'm designing a checkout flow for a food delivery app — show me how top apps like DoorDash and Uber Eats handle it"
+- "Pull up the Duolingo onboarding flow and walk me through each screen's design decisions"
+- "Find login screens that use bottom sheets and extract the color palette — I need inspiration for our auth redesign"
+- "Compare how fintech apps handle settings screens — show me examples from Robinhood, Cash App, and Venmo"
+- "Search for screens with card-based layouts in travel apps, then show me the best one in detail"
+- "What UI patterns are trending right now on iOS? Show me the top screens"
 
 ## How it works
 
 Mobbin is a Next.js app backed by Supabase. This server calls Mobbin's internal API routes (`/api/content/search-apps`, `/api/content/search-screens`, etc.) using your session cookie for authentication. Tokens are automatically refreshed via Supabase's `/auth/v1/token` endpoint before they expire, and persisted back to `~/.mobbin-mcp/auth.json` when using the CLI auth method.
+
+Screen images are served through Mobbin's Bytescale CDN. The `mobbin_get_screen_detail` tool automatically converts Supabase storage URLs from search results into CDN URLs, fetches the image, and returns it as base64 content that the model can see and analyze. Optional color extraction uses [sharp](https://sharp.pixelplumbing.com/) to return dominant hex colors from the screenshot.
 
 ## Project structure
 
