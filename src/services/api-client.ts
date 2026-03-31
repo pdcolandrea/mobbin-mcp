@@ -8,33 +8,34 @@ import type {
   ContentSearchResponse,
   ValueResponse,
 } from "../types";
+import type { MobbinAuth } from "./auth";
 
 /**
  * HTTP client for Mobbin's internal Next.js API routes.
  *
  * Mobbin has no public API — these endpoints were reverse-engineered via Playwright.
- * Auth is handled by passing the user's Supabase session cookie with every request.
- * Cookies expire after ~1 hour; re-login to mobbin.com to refresh.
+ * Auth is handled via {@link MobbinAuth}, which manages the Supabase session cookie
+ * and automatically refreshes tokens before they expire.
  *
  * All endpoints live at `https://mobbin.com/api/...` and proxy to Supabase server-side.
  */
 export class MobbinApiClient {
-  private cookieValue: string;
+  private auth: MobbinAuth;
 
-  /** @param cookieValue Raw cookie string including `sb-ujasntkfphywizsdaapi-auth-token.0` and `.1` */
-  constructor(cookieValue: string) {
-    this.cookieValue = cookieValue;
+  constructor(auth: MobbinAuth) {
+    this.auth = auth;
   }
 
-  /** Make an authenticated request to a Mobbin API route. */
+  /** Make an authenticated request to a Mobbin API route. Automatically uses a fresh token. */
   private async request<T>(
     path: string,
     options: { method?: string; body?: unknown } = {}
   ): Promise<T> {
     const { method = "GET", body } = options;
+    const cookie = await this.auth.getCookieValue();
 
     const headers: Record<string, string> = {
-      Cookie: this.cookieValue,
+      Cookie: cookie,
     };
 
     if (body !== undefined) {

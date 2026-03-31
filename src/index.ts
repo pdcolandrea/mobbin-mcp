@@ -3,6 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { MobbinAuth } from "./services/auth";
 import { MobbinApiClient } from "./services/api-client";
 import { formatApps, formatScreens, formatFlows, formatCollections } from "./utils/formatting";
 import { DEFAULT_PAGE_SIZE } from "./constants";
@@ -20,7 +21,8 @@ if (!cookieValue) {
   process.exit(1);
 }
 
-const client = new MobbinApiClient(cookieValue);
+const auth = new MobbinAuth(cookieValue);
+const client = new MobbinApiClient(auth);
 
 const server = new McpServer({
   name: "mobbin",
