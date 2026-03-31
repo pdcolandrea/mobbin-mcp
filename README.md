@@ -48,6 +48,8 @@ This will walk you through copying your session cookie from the browser:
 
 Your session is saved to `~/.mobbin-mcp/auth.json` and automatically refreshed.
 
+> **What does `copy(document.cookie)` do?** It copies your browser's cookies for the current site (mobbin.com) to your clipboard. This includes your Supabase session tokens, which the MCP server needs to make API requests on your behalf. The cookies are stored locally on your machine at `~/.mobbin-mcp/auth.json` and are never sent anywhere except to Mobbin's API.
+
 **Option B: Environment variable (manual)**
 
 1. Open [mobbin.com](https://mobbin.com) in Chrome and log in
