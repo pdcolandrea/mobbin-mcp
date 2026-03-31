@@ -23,20 +23,12 @@ Mobbin has no public API. This server was built by reverse-engineering their int
 - Node.js 18+
 - A [Mobbin](https://mobbin.com) account (free or paid)
 
-### 1. Clone and install
-
-```bash
-git clone https://github.com/pdcolandrea/mobbin-mcp.git
-cd mobbin-mcp
-npm install
-```
-
-### 2. Authenticate
+### 1. Authenticate
 
 **Option A: CLI command (recommended)**
 
 ```bash
-npx tsx src/index.ts auth
+npx -y mobbin-mcp auth
 ```
 
 This will walk you through copying your session cookie from the browser:
@@ -62,30 +54,20 @@ Your session is saved to `~/.mobbin-mcp/auth.json` and automatically refreshed.
 sb-ujasntkfphywizsdaapi-auth-token.0=<value0>; sb-ujasntkfphywizsdaapi-auth-token.1=<value1>
 ```
 
-6. Set `MOBBIN_AUTH_COOKIE` to that value (see step 3 below)
+6. Set `MOBBIN_AUTH_COOKIE` to that value (see step 2 below)
 
-### 3. Add to Claude Code
+### 2. Add to Claude Code
 
 ```bash
-claude mcp add mobbin -- npx tsx /path/to/mobbin-mcp/src/index.ts
+claude mcp add mobbin -- npx -y mobbin-mcp
 ```
 
 If you used the CLI auth command (Option A), no additional config is needed — the server reads from `~/.mobbin-mcp/auth.json` automatically.
 
-If using the environment variable (Option B), add the env var to your `~/.claude/settings.json`:
+If using the environment variable (Option B), pass it when adding:
 
-```json
-{
-  "mcpServers": {
-    "mobbin": {
-      "command": "npx",
-      "args": ["tsx", "/path/to/mobbin-mcp/src/index.ts"],
-      "env": {
-        "MOBBIN_AUTH_COOKIE": "sb-ujasntkfphywizsdaapi-auth-token.0=...; sb-ujasntkfphywizsdaapi-auth-token.1=..."
-      }
-    }
-  }
-}
+```bash
+claude mcp add mobbin -e MOBBIN_AUTH_COOKIE="sb-ujasntkfphywizsdaapi-auth-token.0=...; sb-ujasntkfphywizsdaapi-auth-token.1=..." -- npx -y mobbin-mcp
 ```
 
 ### Alternative: Claude Desktop
@@ -97,7 +79,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "mobbin": {
       "command": "npx",
-      "args": ["tsx", "/path/to/mobbin-mcp/src/index.ts"]
+      "args": ["-y", "mobbin-mcp"]
     }
   }
 }
