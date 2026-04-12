@@ -125,9 +125,29 @@ export class MobbinAuth {
 
   /**
    * Parse the Supabase session JSON from the raw cookie string.
-   * The session is split across two cookies (`.0` and `.1`) and URL-encoded.
+   *
+   * Supports three cookie formats:
+   * 1. Chunked: `sb-...-auth-token.0=<part1>; sb-...-auth-token.1=<part2>` (Supabase SSR default)
+   * 2. Single (un-chunked): `sb-...-auth-token=<url-encoded-json>` (older Supabase clients)
+   * 3. Raw JSON: direct `{"access_token": "..."}` string (e.g. from `document.cookie` copy)
    */
   private static parseSessionFromCookie(cookie: string): SupabaseSession {
+    // Try parsing as raw JSON first (handles direct session JSON input)
+    try {
+      const parsed = JSON.parse(cookie) as Partial<SupabaseSession> | null;
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        typeof parsed.access_token === "string" &&
+        typeof parsed.refresh_token === "string" &&
+        typeof parsed.expires_at === "number"
+      ) {
+        return parsed as SupabaseSession;
+      }
+    } catch {
+      // Not raw JSON, continue with cookie parsing
+    }
+
     const cookies = cookie.split("; ").reduce<Record<string, string>>((acc, part) => {
       const eqIdx = part.indexOf("=");
       if (eqIdx > 0) {
@@ -138,16 +158,27 @@ export class MobbinAuth {
 
     const chunk0 = cookies[`${SUPABASE_COOKIE_PREFIX}.0`] ?? "";
     const chunk1 = cookies[`${SUPABASE_COOKIE_PREFIX}.1`] ?? "";
-    const combined = decodeURIComponent(chunk0 + chunk1);
+    const unchunked = cookies[SUPABASE_COOKIE_PREFIX] ?? "";
 
-    try {
-      return JSON.parse(combined) as SupabaseSession;
-    } catch {
-      throw new Error(
-        `Failed to parse Supabase session from cookie. ` +
-          `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies.`,
-      );
+    // Try all candidate formats — chunked first, then un-chunked
+    const candidates = [
+      ...(chunk0 || chunk1 ? [chunk0 + chunk1] : []),
+      ...(unchunked ? [unchunked] : []),
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        return JSON.parse(decodeURIComponent(candidate)) as SupabaseSession;
+      } catch {
+        // try next candidate
+      }
     }
+
+    throw new Error(
+      `Failed to parse Supabase session from cookie. ` +
+        `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies, ` +
+        `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie.`,
+    );
   }
 
   /**
