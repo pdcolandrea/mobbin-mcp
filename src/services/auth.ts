@@ -125,9 +125,23 @@ export class MobbinAuth {
 
   /**
    * Parse the Supabase session JSON from the raw cookie string.
-   * The session is split across two cookies (`.0` and `.1`) and URL-encoded.
+   *
+   * Supports three cookie formats:
+   * 1. Chunked: `sb-...-auth-token.0=<part1>; sb-...-auth-token.1=<part2>` (Supabase SSR default)
+   * 2. Single (un-chunked): `sb-...-auth-token=<url-encoded-json>` (older Supabase clients)
+   * 3. Raw JSON: direct `{"access_token": "..."}` string (e.g. from `document.cookie` copy)
    */
   private static parseSessionFromCookie(cookie: string): SupabaseSession {
+    // Try parsing as raw JSON first (handles direct session JSON input)
+    try {
+      const parsed = JSON.parse(cookie);
+      if (parsed.access_token && parsed.refresh_token) {
+        return parsed as SupabaseSession;
+      }
+    } catch {
+      // Not raw JSON, continue with cookie parsing
+    }
+
     const cookies = cookie.split("; ").reduce<Record<string, string>>((acc, part) => {
       const eqIdx = part.indexOf("=");
       if (eqIdx > 0) {
@@ -136,16 +150,26 @@ export class MobbinAuth {
       return acc;
     }, {});
 
+    // Try chunked format first (.0 and .1 suffixes)
     const chunk0 = cookies[`${SUPABASE_COOKIE_PREFIX}.0`] ?? "";
     const chunk1 = cookies[`${SUPABASE_COOKIE_PREFIX}.1`] ?? "";
-    const combined = decodeURIComponent(chunk0 + chunk1);
+
+    // Fall back to un-chunked single cookie
+    const unchunked = cookies[SUPABASE_COOKIE_PREFIX] ?? "";
+
+    const combined = chunk0 || chunk1
+      ? decodeURIComponent(chunk0 + chunk1)
+      : unchunked
+        ? decodeURIComponent(unchunked)
+        : "";
 
     try {
       return JSON.parse(combined) as SupabaseSession;
     } catch {
       throw new Error(
         `Failed to parse Supabase session from cookie. ` +
-          `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies.`,
+          `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies, ` +
+          `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie.`,
       );
     }
   }
