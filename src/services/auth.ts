@@ -134,8 +134,14 @@ export class MobbinAuth {
   private static parseSessionFromCookie(cookie: string): SupabaseSession {
     // Try parsing as raw JSON first (handles direct session JSON input)
     try {
-      const parsed = JSON.parse(cookie);
-      if (parsed.access_token && parsed.refresh_token) {
+      const parsed = JSON.parse(cookie) as Partial<SupabaseSession> | null;
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        typeof parsed.access_token === "string" &&
+        typeof parsed.refresh_token === "string" &&
+        typeof parsed.expires_at === "number"
+      ) {
         return parsed as SupabaseSession;
       }
     } catch {
@@ -150,28 +156,29 @@ export class MobbinAuth {
       return acc;
     }, {});
 
-    // Try chunked format first (.0 and .1 suffixes)
     const chunk0 = cookies[`${SUPABASE_COOKIE_PREFIX}.0`] ?? "";
     const chunk1 = cookies[`${SUPABASE_COOKIE_PREFIX}.1`] ?? "";
-
-    // Fall back to un-chunked single cookie
     const unchunked = cookies[SUPABASE_COOKIE_PREFIX] ?? "";
 
-    const combined = chunk0 || chunk1
-      ? decodeURIComponent(chunk0 + chunk1)
-      : unchunked
-        ? decodeURIComponent(unchunked)
-        : "";
+    // Try all candidate formats — chunked first, then un-chunked
+    const candidates = [
+      ...(chunk0 || chunk1 ? [chunk0 + chunk1] : []),
+      ...(unchunked ? [unchunked] : []),
+    ];
 
-    try {
-      return JSON.parse(combined) as SupabaseSession;
-    } catch {
-      throw new Error(
-        `Failed to parse Supabase session from cookie. ` +
-          `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies, ` +
-          `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie.`,
-      );
+    for (const candidate of candidates) {
+      try {
+        return JSON.parse(decodeURIComponent(candidate)) as SupabaseSession;
+      } catch {
+        // try next candidate
+      }
     }
+
+    throw new Error(
+      `Failed to parse Supabase session from cookie. ` +
+        `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies, ` +
+        `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie.`,
+    );
   }
 
   /**
