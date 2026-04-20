@@ -126,27 +126,40 @@ export class MobbinAuth {
   /**
    * Parse the Supabase session JSON from the raw cookie string.
    *
-   * Supports three cookie formats:
-   * 1. Chunked: `sb-...-auth-token.0=<part1>; sb-...-auth-token.1=<part2>` (Supabase SSR default)
-   * 2. Single (un-chunked): `sb-...-auth-token=<url-encoded-json>` (older Supabase clients)
-   * 3. Raw JSON: direct `{"access_token": "..."}` string (e.g. from `document.cookie` copy)
+   * Supports four cookie formats, tried in this order:
+   * 1. Raw JSON: direct `{"access_token": "..."}` string (e.g. caller passes a session JSON)
+   * 2. Chunked: `sb-...-auth-token.0=<part1>; sb-...-auth-token.1=<part2>` (Supabase SSR default)
+   * 3. Single un-chunked, base64-prefixed: `sb-...-auth-token=base64-<b64-json>` (recent Supabase SSR)
+   * 4. Single un-chunked, URL-encoded JSON: `sb-...-auth-token=<url-encoded-json>` (older Supabase clients)
+   *
+   * Every decode path validates that the result has `access_token`, `refresh_token`, and
+   * `expires_at` before returning. Malformed candidates fall through so a later candidate
+   * can succeed, instead of returning a partial session that would fail later in auth.
    */
   private static parseSessionFromCookie(cookie: string): SupabaseSession {
-    // Try parsing as raw JSON first (handles direct session JSON input)
-    try {
-      const parsed = JSON.parse(cookie) as Partial<SupabaseSession> | null;
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        typeof parsed.access_token === "string" &&
-        typeof parsed.refresh_token === "string" &&
-        typeof parsed.expires_at === "number"
-      ) {
-        return parsed as SupabaseSession;
+    const isSupabaseSession = (value: unknown): value is SupabaseSession => {
+      const session = value as Partial<SupabaseSession> | null;
+      return (
+        !!session &&
+        typeof session === "object" &&
+        typeof session.access_token === "string" &&
+        typeof session.refresh_token === "string" &&
+        typeof session.expires_at === "number"
+      );
+    };
+
+    const parseCandidate = (value: string): SupabaseSession | null => {
+      try {
+        const parsed = JSON.parse(value);
+        return isSupabaseSession(parsed) ? parsed : null;
+      } catch {
+        return null;
       }
-    } catch {
-      // Not raw JSON, continue with cookie parsing
-    }
+    };
+
+    // Try parsing as raw JSON first (handles direct session JSON input)
+    const rawParsed = parseCandidate(cookie);
+    if (rawParsed) return rawParsed;
 
     const cookies = cookie.split("; ").reduce<Record<string, string>>((acc, part) => {
       const eqIdx = part.indexOf("=");
@@ -174,14 +187,16 @@ export class MobbinAuth {
             candidate.slice("base64-".length),
             "base64",
           ).toString("utf-8");
-          return JSON.parse(decoded) as SupabaseSession;
+          const parsed = parseCandidate(decoded);
+          if (parsed) return parsed;
         } catch {
           // fall through
         }
       }
       // Format B: URL-encoded JSON (older Supabase versions)
       try {
-        return JSON.parse(decodeURIComponent(candidate)) as SupabaseSession;
+        const parsed = parseCandidate(decodeURIComponent(candidate));
+        if (parsed) return parsed;
       } catch {
         // try next candidate
       }
@@ -189,8 +204,9 @@ export class MobbinAuth {
 
     throw new Error(
       `Failed to parse Supabase session from cookie. ` +
-        `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies, ` +
-        `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie (base64- or URL-encoded).`,
+        `Accepted formats: raw JSON session; chunked '${SUPABASE_COOKIE_PREFIX}.0' + '.1' cookies; ` +
+        `or un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie (base64-prefixed or URL-encoded JSON). ` +
+        `Decoded candidates must include access_token, refresh_token, and expires_at.`,
     );
   }
 
