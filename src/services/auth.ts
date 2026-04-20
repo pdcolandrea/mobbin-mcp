@@ -167,6 +167,19 @@ export class MobbinAuth {
     ];
 
     for (const candidate of candidates) {
+      // Format A: base64-prefixed JSON (recent Supabase versions)
+      if (candidate.startsWith("base64-")) {
+        try {
+          const decoded = Buffer.from(
+            candidate.slice("base64-".length),
+            "base64",
+          ).toString("utf-8");
+          return JSON.parse(decoded) as SupabaseSession;
+        } catch {
+          // fall through
+        }
+      }
+      // Format B: URL-encoded JSON (older Supabase versions)
       try {
         return JSON.parse(decodeURIComponent(candidate)) as SupabaseSession;
       } catch {
@@ -177,7 +190,7 @@ export class MobbinAuth {
     throw new Error(
       `Failed to parse Supabase session from cookie. ` +
         `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies, ` +
-        `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie.`,
+        `or the un-chunked '${SUPABASE_COOKIE_PREFIX}' cookie (base64- or URL-encoded).`,
     );
   }
 
