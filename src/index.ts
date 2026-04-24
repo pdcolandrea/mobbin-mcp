@@ -68,10 +68,7 @@ async function main() {
         .array(z.string())
         .optional()
         .describe("Filter by app categories (e.g., 'Finance', 'AI', 'Music & Audio')"),
-      sort_by: z
-        .enum(["publishedAt", "trending", "popular", "top"])
-        .default("publishedAt")
-        .describe("Sort order"),
+      sort_by: z.enum(["publishedAt"]).default("publishedAt").describe("Sort order"),
       page_size: z.number().min(1).max(50).default(DEFAULT_PAGE_SIZE).describe("Results per page"),
       page_index: z.number().min(0).default(0).describe("Page number (0-indexed)"),
     },
