@@ -125,7 +125,14 @@ export class MobbinAuth {
 
   /**
    * Parse the Supabase session JSON from the raw cookie string.
-   * The session is split across two cookies (`.0` and `.1`) and URL-encoded.
+   *
+   * Supabase SSR writes the session in one of two formats:
+   *   1. Legacy — URL-encoded JSON, optionally split across `.0`/`.1` chunks.
+   *   2. `base64-` — the literal prefix `base64-` followed by base64-encoded
+   *      JSON, also optionally chunked. Chunking happens by byte-splitting the
+   *      full `base64-...` string, so only the first chunk carries the prefix.
+   *
+   * We detect the format by looking at the reassembled chunk 0.
    */
   private static parseSessionFromCookie(cookie: string): SupabaseSession {
     const cookies = cookie.split("; ").reduce<Record<string, string>>((acc, part) => {
@@ -136,15 +143,26 @@ export class MobbinAuth {
       return acc;
     }, {});
 
-    // Supabase only splits the session into `.0`/`.1` chunks when the JSON
+    // Supabase only splits the session into `.0`/`.1` chunks when the value
     // exceeds the ~4KB single-cookie limit. Smaller sessions are written to
     // the bare cookie name with no suffix, so fall back to that.
-    const chunk0 =
-      cookies[`${SUPABASE_COOKIE_PREFIX}.0`] ??
-      cookies[SUPABASE_COOKIE_PREFIX] ??
-      "";
+    const chunk0 = cookies[`${SUPABASE_COOKIE_PREFIX}.0`] ?? cookies[SUPABASE_COOKIE_PREFIX] ?? "";
     const chunk1 = cookies[`${SUPABASE_COOKIE_PREFIX}.1`] ?? "";
-    const combined = decodeURIComponent(chunk0 + chunk1);
+    const joined = chunk0 + chunk1;
+
+    let combined: string;
+    if (joined.startsWith("base64-")) {
+      try {
+        combined = Buffer.from(joined.slice("base64-".length), "base64").toString("utf-8");
+      } catch {
+        throw new Error(
+          `Failed to base64-decode Supabase session cookie. ` +
+            `Make sure MOBBIN_AUTH_COOKIE contains the complete '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies.`,
+        );
+      }
+    } else {
+      combined = decodeURIComponent(joined);
+    }
 
     try {
       return JSON.parse(combined) as SupabaseSession;
