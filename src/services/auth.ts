@@ -127,12 +127,13 @@ export class MobbinAuth {
    * Parse the Supabase session JSON from the raw cookie string.
    *
    * Supabase SSR writes the session in one of two formats:
-   *   1. Legacy — URL-encoded JSON, optionally split across `.0`/`.1` chunks.
+   *   1. Legacy — URL-encoded JSON, optionally split across `.0`/`.1`/... chunks.
    *   2. `base64-` — the literal prefix `base64-` followed by base64-encoded
    *      JSON, also optionally chunked. Chunking happens by byte-splitting the
    *      full `base64-...` string, so only the first chunk carries the prefix.
    *
-   * We detect the format by looking at the reassembled chunk 0.
+   * Chunks are read in order (`.0`, `.1`, `.2`, ...) until the first gap, which
+   * matches how `@supabase/ssr` reassembles cookies.
    */
   private static parseSessionFromCookie(cookie: string): SupabaseSession {
     const cookies = cookie.split("; ").reduce<Record<string, string>>((acc, part) => {
@@ -143,12 +144,21 @@ export class MobbinAuth {
       return acc;
     }, {});
 
-    // Supabase only splits the session into `.0`/`.1` chunks when the value
-    // exceeds the ~4KB single-cookie limit. Smaller sessions are written to
-    // the bare cookie name with no suffix, so fall back to that.
-    const chunk0 = cookies[`${SUPABASE_COOKIE_PREFIX}.0`] ?? cookies[SUPABASE_COOKIE_PREFIX] ?? "";
-    const chunk1 = cookies[`${SUPABASE_COOKIE_PREFIX}.1`] ?? "";
-    const joined = chunk0 + chunk1;
+    // For small sessions Supabase writes the whole value under the bare name
+    // (no `.N` suffix). Otherwise it splits into `.0`, `.1`, ... by byte
+    // length. Prefer the chunked form and fall back to the bare cookie.
+    let joined: string;
+    if (cookies[`${SUPABASE_COOKIE_PREFIX}.0`] !== undefined) {
+      const parts: string[] = [];
+      for (let i = 0; ; i++) {
+        const part = cookies[`${SUPABASE_COOKIE_PREFIX}.${i}`];
+        if (part === undefined) break;
+        parts.push(part);
+      }
+      joined = parts.join("");
+    } else {
+      joined = cookies[SUPABASE_COOKIE_PREFIX] ?? "";
+    }
 
     let combined: string;
     if (joined.startsWith("base64-")) {
@@ -157,7 +167,7 @@ export class MobbinAuth {
       } catch {
         throw new Error(
           `Failed to base64-decode Supabase session cookie. ` +
-            `Make sure MOBBIN_AUTH_COOKIE contains the complete '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies.`,
+            `Make sure MOBBIN_AUTH_COOKIE contains the complete '${SUPABASE_COOKIE_PREFIX}.*' cookies.`,
         );
       }
     } else {
@@ -169,20 +179,31 @@ export class MobbinAuth {
     } catch {
       throw new Error(
         `Failed to parse Supabase session from cookie. ` +
-          `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.0' and '.1' cookies.`,
+          `Make sure MOBBIN_AUTH_COOKIE contains the '${SUPABASE_COOKIE_PREFIX}.*' cookies.`,
       );
     }
   }
 
   /**
-   * Rebuild the raw cookie string from a session object.
-   * Splits the JSON across two cookies to match Supabase's chunking behavior.
+   * Rebuild the raw cookie string from a session object in the `base64-`
+   * format that Mobbin's server expects. Sessions larger than
+   * {@link COOKIE_CHUNK_SIZE} bytes are split across `.0`, `.1`, ... chunks
+   * (matching `@supabase/ssr`'s chunker) — the legacy URL-encoded form is
+   * rejected as "unauthenticated" by Mobbin's API routes.
    */
   private static buildCookieString(session: SupabaseSession): string {
-    const encoded = encodeURIComponent(JSON.stringify(session));
-    const midpoint = Math.ceil(encoded.length / 2);
-    const chunk0 = encoded.substring(0, midpoint);
-    const chunk1 = encoded.substring(midpoint);
-    return `${SUPABASE_COOKIE_PREFIX}.0=${chunk0}; ${SUPABASE_COOKIE_PREFIX}.1=${chunk1}`;
+    const value = "base64-" + Buffer.from(JSON.stringify(session), "utf-8").toString("base64");
+    const chunks: string[] = [];
+    for (let i = 0; i < value.length; i += COOKIE_CHUNK_SIZE) {
+      chunks.push(value.slice(i, i + COOKIE_CHUNK_SIZE));
+    }
+    return chunks.map((chunk, i) => `${SUPABASE_COOKIE_PREFIX}.${i}=${chunk}`).join("; ");
   }
 }
+
+/**
+ * Per-cookie chunk size used when splitting large sessions. Matches
+ * `@supabase/ssr`'s default — 3180 bytes leaves headroom below the
+ * common 4KB browser cookie limit.
+ */
+const COOKIE_CHUNK_SIZE = 3180;
