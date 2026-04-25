@@ -3,6 +3,7 @@ import {
   SUPABASE_ANON_KEY,
   SUPABASE_COOKIE_PREFIX,
   TOKEN_REFRESH_BUFFER_SECONDS,
+  COOKIE_CHUNK_SIZE,
 } from "../constants.js";
 
 export interface SupabaseSession {
@@ -160,19 +161,11 @@ export class MobbinAuth {
       joined = cookies[SUPABASE_COOKIE_PREFIX] ?? "";
     }
 
-    let combined: string;
-    if (joined.startsWith("base64-")) {
-      try {
-        combined = Buffer.from(joined.slice("base64-".length), "base64").toString("utf-8");
-      } catch {
-        throw new Error(
-          `Failed to base64-decode Supabase session cookie. ` +
-            `Make sure MOBBIN_AUTH_COOKIE contains the complete '${SUPABASE_COOKIE_PREFIX}.*' cookies.`,
-        );
-      }
-    } else {
-      combined = decodeURIComponent(joined);
-    }
+    // Buffer.from(..., "base64") never throws — invalid input silently produces
+    // garbage bytes, which then fail in the JSON.parse below with a clearer error.
+    const combined = joined.startsWith("base64-")
+      ? Buffer.from(joined.slice("base64-".length), "base64").toString("utf-8")
+      : decodeURIComponent(joined);
 
     try {
       return JSON.parse(combined) as SupabaseSession;
@@ -200,10 +193,3 @@ export class MobbinAuth {
     return chunks.map((chunk, i) => `${SUPABASE_COOKIE_PREFIX}.${i}=${chunk}`).join("; ");
   }
 }
-
-/**
- * Per-cookie chunk size used when splitting large sessions. Matches
- * `@supabase/ssr`'s default — 3180 bytes leaves headroom below the
- * common 4KB browser cookie limit.
- */
-const COOKIE_CHUNK_SIZE = 3180;

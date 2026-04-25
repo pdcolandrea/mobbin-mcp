@@ -32,6 +32,13 @@ export const SUPABASE_COOKIE_PREFIX = "sb-ujasntkfphywizsdaapi-auth-token";
 /** Refresh the token this many seconds before it actually expires. */
 export const TOKEN_REFRESH_BUFFER_SECONDS = 300;
 
+/**
+ * Per-cookie chunk size used when splitting large Supabase sessions across
+ * `.0`, `.1`, ... cookies. Matches `@supabase/ssr`'s default — 3180 bytes
+ * leaves headroom below the common 4KB browser cookie limit.
+ */
+export const COOKIE_CHUNK_SIZE = 3180;
+
 /** Maximum image size in bytes to fetch (10MB). */
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
