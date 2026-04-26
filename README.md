@@ -29,7 +29,7 @@ Mobbin has no public API. This server was built by reverse-engineering their int
 **Option A: CLI command (recommended)**
 
 ```bash
-npx -y mobbin-mcp auth
+npx -y mobbin-mcp@latest auth
 ```
 
 This will walk you through copying your session cookie from the browser:
