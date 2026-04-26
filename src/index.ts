@@ -20,10 +20,6 @@ import { readStoredSession, writeStoredSession } from "./utils/auth-store.js";
 
 type FilterKind = "categories" | "patterns" | "elements" | "actions";
 
-// Substring match on the upstream category slug. Loose on purpose: the API has
-// shipped a few different slug formats (`app_categories` vs `appCategories`),
-// and a substring keeps us resilient. If we ever see a kind match zero or
-// multiple categories in practice, tighten to exact strings here.
 const KIND_MATCHERS: Record<FilterKind, (slug: string) => boolean> = {
   categories: (s) => s.includes("categor"),
   patterns: (s) => s.includes("pattern"),
@@ -34,14 +30,12 @@ const KIND_MATCHERS: Record<FilterKind, (slug: string) => boolean> = {
 const DICT_TTL_MS = 60 * 60 * 1000;
 
 async function main() {
-  // CLI subcommand routing
   if (process.argv[2] === "auth") {
     const { runAuthFlow } = await import("./cli/auth.js");
     await runAuthFlow();
     return;
   }
 
-  // Resolve authentication: stored session first, then cookie fallback
   let auth: MobbinAuth;
 
   const storedSession = readStoredSession();
@@ -54,12 +48,12 @@ async function main() {
     if (!cookieValue) {
       console.error(
         "Error: No authentication found.\n\n" +
-          "Option 1 (recommended): Run 'npx mobbin-mcp auth' to log in with your email.\n\n" +
-          "Option 2: Set the MOBBIN_AUTH_COOKIE environment variable.\n" +
-          "  1. Open mobbin.com and log in\n" +
-          "  2. Open DevTools > Application > Cookies\n" +
-          "  3. Copy the full cookie string (all cookies for mobbin.com)\n" +
-          "  4. Set MOBBIN_AUTH_COOKIE to that value",
+        "Option 1 (recommended): Run 'npx mobbin-mcp auth' to log in with your email.\n\n" +
+        "Option 2: Set the MOBBIN_AUTH_COOKIE environment variable.\n" +
+        " 1. Open mobbin.com and log in\n" +
+        " 2. Open DevTools > Application > Cookies\n" +
+        " 3. Copy the full cookie string (all cookies for mobbin.com)\n" +
+        " 4. Set MOBBIN_AUTH_COOKIE to that value",
       );
       process.exit(1);
     }
@@ -83,11 +77,10 @@ async function main() {
       "Search and browse Mobbin design inspiration — apps, screens, flows, and collections",
   });
 
-  // --- Search Apps ---
   server.tool(
     "mobbin_search_apps",
     "Search and browse apps on Mobbin by category and platform. Returns app names, logos, preview screens, and version IDs for deeper exploration. " +
-      "Use when: you want catalog discovery by platform or category. Prefer mobbin_quick_search when you already know the app name and need its app_id.",
+    "Use when: you want catalog discovery by platform or category. Prefer mobbin_quick_search when you already know the app name and need its app_id.",
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
       categories: z
@@ -112,11 +105,10 @@ async function main() {
     },
   );
 
-  // --- Search Screens ---
   server.tool(
     "mobbin_search_screens",
     "Search screens across all apps on Mobbin. Filter by screen patterns (e.g., 'Login', 'Settings'), UI elements (e.g., 'Card', 'Table'), or text content. Returns screenshot URLs and metadata. " +
-      "Use when: you want global screen inspiration across apps. Use screen_patterns for Mobbin taxonomy concepts, screen_keywords for visible/OCR text, and mobbin_get_app_screens after mobbin_quick_search when the user names a specific app.",
+    "Use when: you want global screen inspiration across apps. Use screen_patterns for Mobbin taxonomy concepts, screen_keywords for visible/OCR text, and mobbin_get_app_screens after mobbin_quick_search when the user names a specific app.",
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
       screen_patterns: z
@@ -169,11 +161,10 @@ async function main() {
     },
   );
 
-  // --- Search Flows ---
   server.tool(
     "mobbin_search_flows",
     "Search user flows/journeys across all apps on Mobbin. Filter by flow actions (e.g., 'Creating Account', 'Editing Profile'). Returns flow screens with hotspot data for prototyping. " +
-      "Use when: you want global journey inspiration by action type. Prefer mobbin_get_app_flows after mobbin_quick_search when the user asks about flows for a specific app.",
+    "Use when: you want global journey inspiration by action type. Prefer mobbin_get_app_flows after mobbin_quick_search when the user asks about flows for a specific app.",
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
       flow_actions: z
@@ -202,11 +193,10 @@ async function main() {
     },
   );
 
-  // --- Quick Search (Autocomplete) ---
   server.tool(
     "mobbin_quick_search",
     "Quick autocomplete search for apps by name. Returns matching app IDs and names. Use this for fast lookup before fetching full details. " +
-      "Use when: you have an app name or likely app name and need its app_id. Prefer mobbin_search_apps for browsing apps by platform/category, then use the app_id with mobbin_get_app_screens or mobbin_get_app_flows for app-specific results.",
+    "Use when: you have an app name or likely app name and need its app_id. Prefer mobbin_search_apps for browsing apps by platform/category, then use the app_id with mobbin_get_app_screens or mobbin_get_app_flows for app-specific results.",
     {
       query: z.string().describe("Search query (app name or keyword)"),
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
@@ -241,15 +231,10 @@ async function main() {
     },
   );
 
-  // --- Get App Screens ---
-  // The documented `search-screens` endpoint silently ignores per-app filters,
-  // so we can't drill into a single app via the search API. Instead, this tool
-  // (and `mobbin_get_app_flows`) reads from the SSR'd app-detail page, which
-  // is the same source the Mobbin web UI uses.
   server.tool(
     "mobbin_get_app_screens",
     "Get all screens for a specific app on Mobbin. Pair with mobbin_quick_search to drill into one app: quick_search -> app_id -> get_app_screens. Returns every screen for that app with patterns, elements, and dimensions. " +
-      "Use when: the user names a specific app and wants that app's screens. Prefer mobbin_search_screens for broad cross-app examples by pattern, element, keyword, or category.",
+    "Use when: the user names a specific app and wants that app's screens. Prefer mobbin_search_screens for broad cross-app examples by pattern, element, keyword, or category.",
     {
       app_id: z
         .string()
@@ -275,11 +260,10 @@ async function main() {
     },
   );
 
-  // --- Get App Flows ---
   server.tool(
     "mobbin_get_app_flows",
     "Get all user flows for a specific app on Mobbin. Pair with mobbin_quick_search: quick_search -> app_id -> get_app_flows. Returns each flow's screens with hotspot data for prototyping. " +
-      "Use when: the user names a specific app and wants that app's flows. Prefer mobbin_search_flows for broad cross-app journey examples by action or category.",
+    "Use when: the user names a specific app and wants that app's flows. Prefer mobbin_search_flows for broad cross-app journey examples by action or category.",
     {
       app_id: z
         .string()
@@ -305,11 +289,10 @@ async function main() {
     },
   );
 
-  // --- Popular Apps ---
   server.tool(
     "mobbin_popular_apps",
     "Get the most popular apps on Mobbin, grouped by category. Great for discovering trending design inspiration. " +
-      'Use when: you want a category-grouped popularity snapshot. Prefer mobbin_search_apps with sort_by: "publishedAt" when you need paginated recent app browsing or category filters.',
+    'Use when: you want a category-grouped popularity snapshot. Prefer mobbin_search_apps with sort_by: "publishedAt" when you need paginated recent app browsing or category filters.',
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform"),
       limit_per_category: z.number().min(1).max(20).default(10).describe("Max apps per category"),
@@ -349,11 +332,10 @@ async function main() {
     },
   );
 
-  // --- Collections ---
   server.tool(
     "mobbin_list_collections",
     "List your saved Mobbin collections with item counts. " +
-      "Use when: you need saved collection names, IDs, and app/screen/flow counts. This lists collection metadata only; collection item fetching is not available until mobbin_get_collection lands.",
+    "Use when: you need saved collection names, IDs, and app/screen/flow counts. This lists collection metadata only; collection item fetching is not available until mobbin_get_collection lands.",
     {},
     async () => {
       const result = await client.getCollections();
@@ -363,20 +345,19 @@ async function main() {
     },
   );
 
-  // --- Filter Taxonomy ---
   server.tool(
     "mobbin_get_filters",
     "Get valid values for one Mobbin filter facet (categories, patterns, elements, or actions). " +
-      "Returns a plain newline list of names by default — pass include_definitions or include_counts to enrich. " +
-      "Use the result to build the categories, screen_patterns, screen_elements, or flow_actions params on the search tools. " +
-      "Use when: you need valid filter values or definitions instead of guessing names for any mobbin_search_* filter.",
+    "Returns a plain newline list of names by default — pass include_definitions or include_counts to enrich. " +
+    "Use the result to build the categories, screen_patterns, screen_elements, or flow_actions params on the search tools. " +
+    "Use when: you need valid filter values or definitions instead of guessing names for any mobbin_search_* filter.",
     {
       kind: z
         .enum(["categories", "patterns", "elements", "actions"])
         .describe(
           "Which filter facet to fetch. Use the kind matching the search-tool param you're filling: " +
-            "'categories' → appCategories, 'patterns' → screenPatterns, " +
-            "'elements' → screenElements, 'actions' → flowActions.",
+          "'categories' → appCategories, 'patterns' → screenPatterns, " +
+          "'elements' → screenElements, 'actions' → flowActions.",
         ),
       include_definitions: z
         .boolean()
@@ -411,11 +392,10 @@ async function main() {
     },
   );
 
-  // --- Get Screen Detail ---
   server.tool(
     "mobbin_get_screen_detail",
     "Fetch a full screenshot image and metadata for a specific screen. Use a screenUrl from search_screens, search_flows, or get_app_screens results. Returns the actual image so you can see the UI design. " +
-      "Use when: you already have a screen_url and need the full image, visual inspection, metadata, or optional dominant color extraction.",
+    "Use when: you already have a screen_url and need the full image, visual inspection, metadata, or optional dominant color extraction.",
     {
       screen_url: z
         .string()
@@ -445,12 +425,15 @@ async function main() {
       extract_colors,
     }) => {
       try {
-        const { base64, mimeType, sizeBytes, buffer } = await client.fetchScreenImage(screen_url);
+        const { base64, mimeType, sizeBytes, buffer, dimensions: extractedDimensions } = await client.fetchScreenImage(screen_url);
 
         let dominantColors: string[] | undefined;
         if (extract_colors) {
           dominantColors = await client.extractColors(buffer);
         }
+
+        // Use provided dimensions or fall back to extracted ones
+        const finalDimensions = dimensions || extractedDimensions;
 
         const metadataText = formatScreenDetail({
           screenUrl: screen_url,
@@ -458,7 +441,7 @@ async function main() {
           appName: app_name,
           screenPatterns: screen_patterns,
           screenElements: screen_elements,
-          dimensions,
+          dimensions: finalDimensions,
           imageSizeBytes: sizeBytes,
           mimeType,
           dominantColors,
@@ -485,7 +468,6 @@ async function main() {
     },
   );
 
-  // --- Start Server ---
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
