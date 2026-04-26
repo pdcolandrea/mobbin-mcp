@@ -5,6 +5,7 @@ import type {
   FlowResult,
   Collection,
   DictionaryCategory,
+  AppPageScreen,
 } from "../types.js";
 
 export function formatApps(apps: AppResult[]): string {
@@ -47,6 +48,28 @@ export function formatScreens(screens: ScreenResult[]): string {
       `- **App ID**: ${s.appId}`,
       `- **Screen ID**: ${s.id}`,
       s.metadata ? `- **Dimensions**: ${s.metadata.width}x${s.metadata.height}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+
+  return truncate(lines.join("\n\n"));
+}
+
+export function formatAppPageScreens(screens: AppPageScreen[]): string {
+  if (screens.length === 0) return "No screens found for this app.";
+
+  const lines = screens.map((s, i) =>
+    [
+      `### ${i + 1}. ${s.appName} — ${s.screenPatterns.join(", ") || "Screen"}`,
+      `- **App**: ${s.appName} (${s.platform})`,
+      `- **Patterns**: ${s.screenPatterns.join(", ") || "None"}`,
+      `- **Elements**: ${s.screenElements.join(", ") || "None"}`,
+      `- **Screen URL**: ${s.screenUrl}`,
+      `- **Screen ID**: ${s.id}`,
+      `- **App ID**: ${s.appId}`,
+      `- **Dimensions**: ${s.width}x${s.height}`,
+      s.isAppKeyScreen ? `- **Key screen**: yes` : "",
     ]
       .filter(Boolean)
       .join("\n"),
