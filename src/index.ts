@@ -251,17 +251,9 @@ async function main() {
     "Get all screens for a specific app on Mobbin. Pair with mobbin_quick_search to drill into one app: quick_search -> app_id -> get_app_screens. Returns every screen for that app with patterns, elements, and dimensions. " +
       "Use when: the user names a specific app and wants that app's screens. Prefer mobbin_search_screens for broad cross-app examples by pattern, element, keyword, or category.",
     {
-      app_id: z
-        .string()
-        .uuid()
-        .describe("App ID from mobbin_quick_search"),
+      app_id: z.string().uuid().describe("App ID from mobbin_quick_search"),
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("App platform"),
-      page_size: z
-        .number()
-        .min(1)
-        .max(50)
-        .default(DEFAULT_PAGE_SIZE)
-        .describe("Results per page"),
+      page_size: z.number().min(1).max(50).default(DEFAULT_PAGE_SIZE).describe("Results per page"),
       page_index: z.number().min(0).default(0).describe("Page number (0-indexed)"),
     },
     async ({ app_id, platform, page_size, page_index }) => {
@@ -281,17 +273,9 @@ async function main() {
     "Get all user flows for a specific app on Mobbin. Pair with mobbin_quick_search: quick_search -> app_id -> get_app_flows. Returns each flow's screens with hotspot data for prototyping. " +
       "Use when: the user names a specific app and wants that app's flows. Prefer mobbin_search_flows for broad cross-app journey examples by action or category.",
     {
-      app_id: z
-        .string()
-        .uuid()
-        .describe("App ID from mobbin_quick_search"),
+      app_id: z.string().uuid().describe("App ID from mobbin_quick_search"),
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("App platform"),
-      page_size: z
-        .number()
-        .min(1)
-        .max(50)
-        .default(DEFAULT_PAGE_SIZE)
-        .describe("Results per page"),
+      page_size: z.number().min(1).max(50).default(DEFAULT_PAGE_SIZE).describe("Results per page"),
       page_index: z.number().min(0).default(0).describe("Page number (0-indexed)"),
     },
     async ({ app_id, platform, page_size, page_index }) => {

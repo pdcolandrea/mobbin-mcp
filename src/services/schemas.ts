@@ -234,9 +234,7 @@ export const appPageScreenSchema = z
  * `[2]` (and beyond) is dictionary metadata we ignore. Validate the inner
  * arrays with their own schemas in code rather than locking the tuple length.
  */
-export const appPagePayloadEntrySchema = z
-  .object({ value: z.unknown() })
-  .passthrough();
+export const appPagePayloadEntrySchema = z.object({ value: z.unknown() }).passthrough();
 
 export const appPagePayloadSchema = z.array(appPagePayloadEntrySchema).min(2);
 

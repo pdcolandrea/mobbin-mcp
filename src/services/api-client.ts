@@ -317,9 +317,7 @@ export class MobbinApiClient {
       redirect: "follow",
     });
     if (!res.ok) {
-      throw new Error(
-        `Mobbin app page fetch failed: ${res.status} ${res.statusText} - ${path}`,
-      );
+      throw new Error(`Mobbin app page fetch failed: ${res.status} ${res.statusText} - ${path}`);
     }
     const html = await res.text();
 
