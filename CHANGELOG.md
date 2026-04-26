@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.0](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.0.8...v1.1.0) (2026-04-26)
+
+
+### Features
+
+* add mobbin_get_app_screens and mobbin_get_app_flows ([#26](https://github.com/pdcolandrea/mobbin-mcp/issues/26)) ([1e5aa59](https://github.com/pdcolandrea/mobbin-mcp/commit/1e5aa59697b1930a9977062fade0645a8d86e6e4))
+* scope mobbin_get_filters to a single facet ([#25](https://github.com/pdcolandrea/mobbin-mcp/issues/25)) ([c971e6a](https://github.com/pdcolandrea/mobbin-mcp/commit/c971e6a49b88b6cab685bbcb7731faf29650f615))
+* validate Mobbin API responses with zod at the client boundary ([#23](https://github.com/pdcolandrea/mobbin-mcp/issues/23)) ([e5ada99](https://github.com/pdcolandrea/mobbin-mcp/commit/e5ada9949f87b32e6549aaded630413deb27d997))
+
 ## [1.0.8](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.0.7...v1.0.8) (2026-04-26)
 
 
