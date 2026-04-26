@@ -12,10 +12,16 @@ Mobbin has no public API. This server was built by reverse-engineering their int
 | `mobbin_search_screens`    | Search screens by UI patterns, elements, or text content                                     |
 | `mobbin_search_flows`      | Search user flows by action type (e.g., onboarding, checkout)                                |
 | `mobbin_quick_search`      | Fast autocomplete search for apps by name                                                    |
+| `mobbin_get_app_screens`   | Get every screen for one app (pair with `quick_search` to drill into a specific app)         |
+| `mobbin_get_app_flows`     | Get every user flow for one app (pair with `quick_search` to drill into a specific app)      |
 | `mobbin_popular_apps`      | Get popular apps grouped by category                                                         |
 | `mobbin_list_collections`  | List your saved collections                                                                  |
 | `mobbin_get_screen_detail` | Fetch a full screenshot image for a specific screen, with optional dominant color extraction |
 | `mobbin_get_filters`       | Get valid values for one filter facet — `kind: "categories" \| "patterns" \| "elements" \| "actions"` |
+
+### Drilling into a specific app
+
+`mobbin_search_screens` and `mobbin_search_flows` index Mobbin globally — they don't accept an `app_id` filter (the upstream API ignores per-app filters silently). For "show me Notion's onboarding"-style queries, use the two-step path: `mobbin_quick_search` to look up the app's `id`, then `mobbin_get_app_screens` or `mobbin_get_app_flows` with that `app_id`. The detail tools read from Mobbin's SSR'd app-detail page, so they return everything Mobbin has for that app.
 
 ### Migration: `mobbin_get_filters`
 

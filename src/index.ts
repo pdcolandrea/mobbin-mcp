@@ -12,6 +12,7 @@ import {
   formatCollections,
   formatScreenDetail,
   formatFilterFacet,
+  formatAppPageScreens,
 } from "./utils/formatting.js";
 import { DEFAULT_PAGE_SIZE } from "./constants.js";
 import type { DictionaryCategory } from "./types.js";
@@ -233,6 +234,68 @@ async function main() {
         .join("\n\n");
 
       return { content: [{ type: "text", text }] };
+    },
+  );
+
+  // --- Get App Screens ---
+  // The documented `search-screens` endpoint silently ignores per-app filters,
+  // so we can't drill into a single app via the search API. Instead, this tool
+  // (and `mobbin_get_app_flows`) reads from the SSR'd app-detail page, which
+  // is the same source the Mobbin web UI uses.
+  server.tool(
+    "mobbin_get_app_screens",
+    "Get all screens for a specific app on Mobbin. Pair with mobbin_quick_search to drill into one app: quick_search → app_id → get_app_screens. Returns every screen for that app with patterns, elements, and dimensions.",
+    {
+      app_id: z
+        .string()
+        .uuid()
+        .describe("App ID from mobbin_quick_search"),
+      platform: z.enum(["ios", "android", "web"]).default("ios").describe("App platform"),
+      page_size: z
+        .number()
+        .min(1)
+        .max(50)
+        .default(DEFAULT_PAGE_SIZE)
+        .describe("Results per page"),
+      page_index: z.number().min(0).default(0).describe("Page number (0-indexed)"),
+    },
+    async ({ app_id, platform, page_size, page_index }) => {
+      const { screens, appName } = await client.getAppPage({ appId: app_id, platform });
+      const start = page_index * page_size;
+      const slice = screens.slice(start, start + page_size);
+      const header = `**${appName}** (${platform}) — ${screens.length} screens total. Showing ${start + 1}–${Math.min(start + slice.length, screens.length)}.\n\n`;
+      return {
+        content: [{ type: "text", text: header + formatAppPageScreens(slice) }],
+      };
+    },
+  );
+
+  // --- Get App Flows ---
+  server.tool(
+    "mobbin_get_app_flows",
+    "Get all user flows for a specific app on Mobbin. Pair with mobbin_quick_search: quick_search → app_id → get_app_flows. Returns each flow's screens with hotspot data for prototyping.",
+    {
+      app_id: z
+        .string()
+        .uuid()
+        .describe("App ID from mobbin_quick_search"),
+      platform: z.enum(["ios", "android", "web"]).default("ios").describe("App platform"),
+      page_size: z
+        .number()
+        .min(1)
+        .max(50)
+        .default(DEFAULT_PAGE_SIZE)
+        .describe("Results per page"),
+      page_index: z.number().min(0).default(0).describe("Page number (0-indexed)"),
+    },
+    async ({ app_id, platform, page_size, page_index }) => {
+      const { flows, appName } = await client.getAppPage({ appId: app_id, platform });
+      const start = page_index * page_size;
+      const slice = flows.slice(start, start + page_size);
+      const header = `**${appName}** (${platform}) — ${flows.length} flows total. Showing ${start + 1}–${Math.min(start + slice.length, flows.length)}.\n\n`;
+      return {
+        content: [{ type: "text", text: header + formatFlows(slice) }],
+      };
     },
   );
 

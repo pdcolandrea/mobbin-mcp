@@ -10,6 +10,7 @@ import type {
   dictionaryCategorySchema,
   popularAppEntrySchema,
   autocompleteResponseSchema,
+  appPageScreenSchema,
 } from "./services/schemas.js";
 
 /**
@@ -29,6 +30,7 @@ export type Collection = z.infer<typeof collectionSchema>;
 export type DictionaryCategory = z.infer<typeof dictionaryCategorySchema>;
 export type PopularAppEntry = z.infer<typeof popularAppEntrySchema>;
 export type AutocompleteResponse = z.infer<typeof autocompleteResponseSchema>;
+export type AppPageScreen = z.infer<typeof appPageScreenSchema>;
 
 /** Pagination params used by all `/api/content/search-*` endpoints. */
 export interface PaginationOptions {

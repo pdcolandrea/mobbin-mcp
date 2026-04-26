@@ -186,6 +186,60 @@ export const autocompleteResponseSchema = z
   })
   .passthrough();
 
+/**
+ * Screens as embedded in the SSR'd app-detail page (`/apps/{slug}/screens`).
+ * Shape differs from `screenResultSchema` (the search-screens API): SSR carries
+ * extras like OCR boxes and `isAppKeyScreen`, but lacks `screenNumber`,
+ * `appCategory`, `popularityMetric`, etc. Used by `getAppPage`.
+ */
+export const ocrBoundingBoxSchema = z
+  .object({
+    text: z.string(),
+    bbox: z
+      .object({
+        x0: z.number(),
+        y0: z.number(),
+        x1: z.number(),
+        y1: z.number(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+export const appPageScreenSchema = z
+  .object({
+    type: z.string(),
+    id: z.string(),
+    screenUrl: z.string(),
+    createdAt: z.string(),
+    width: z.number(),
+    height: z.number(),
+    fullpageScreenUrl: z.string().nullable(),
+    screenElements: z.array(z.string()),
+    screenPatterns: z.array(z.string()),
+    isAppKeyScreen: z.boolean(),
+    appId: z.string(),
+    appName: z.string(),
+    appLogoUrl: z.string(),
+    platform: z.string(),
+    appVersionId: z.string(),
+    appVersionPublishedAt: z.string(),
+    ocrBoundingBoxes: z.array(ocrBoundingBoxSchema).nullable().optional(),
+  })
+  .passthrough();
+
+/**
+ * Top-level shape of the structured payload extracted from the SSR HTML —
+ * an array where `[0].value` is flows and `[1].value` is the flat screens list.
+ * `[2]` (and beyond) is dictionary metadata we ignore. Validate the inner
+ * arrays with their own schemas in code rather than locking the tuple length.
+ */
+export const appPagePayloadEntrySchema = z
+  .object({ value: z.unknown() })
+  .passthrough();
+
+export const appPagePayloadSchema = z.array(appPagePayloadEntrySchema).min(2);
+
 /** Wraps an item schema in the standard paginated `{ value: { searchRequestId, data: T[] } }` envelope. */
 export const contentSearchResponseSchema = <T extends z.ZodTypeAny>(item: T) =>
   z
