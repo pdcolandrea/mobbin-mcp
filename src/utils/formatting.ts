@@ -55,7 +55,10 @@ export function formatFlows(flows: FlowResult[]): string {
   const lines = flows.map((f, i) => {
     const screenList = f.screens
       .slice(0, 5)
-      .map((s, j) => `  ${j + 1}. ${s.screenPatterns.join(", ") || "Step"} — ${s.screenUrl}`)
+      .map((s, j) => {
+        const hotspot = s.hotspotX !== null ? " [hotspot]" : "";
+        return `  ${j + 1}.${hotspot} ${s.screenUrl}`;
+      })
       .join("\n");
     const appInfo = f.appName ? `- **App**: ${f.appName}` : "";
     return [

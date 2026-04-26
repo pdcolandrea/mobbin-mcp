@@ -95,7 +95,6 @@ export interface ScreenResult {
  * Hotspot coordinates are normalized (0-1) relative to the screen dimensions.
  */
 export interface FlowScreen {
-  id: string;
   /** Position in the flow sequence (0-indexed). */
   order: number;
   hotspotType: string | null;
@@ -112,9 +111,8 @@ export interface FlowScreen {
   screenUrl: string;
   /** References the parent screen record by ID. */
   screenId: string;
-  screenElements: string[];
-  screenPatterns: string[];
-  metadata: { width: number; height: number };
+  width: number;
+  height: number;
 }
 
 /**
@@ -127,7 +125,6 @@ export interface FlowResult {
   name: string;
   /** Actions performed in this flow (e.g., "Creating Account", "Verifying"). */
   actions: string[];
-  order: number;
   /** Bytescale CDN URL for the flow video recording, if available. */
   videoUrl: string | null;
   /** Ordered list of screens in this flow. */
