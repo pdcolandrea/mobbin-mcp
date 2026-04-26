@@ -148,9 +148,7 @@ export const dictionaryCategorySchema = z
                 displayName: z.string(),
                 definition: z.string(),
                 hidden: z.boolean().optional(),
-                contentCounts: z
-                  .record(z.union([z.record(z.number()), z.number()]))
-                  .nullable(),
+                contentCounts: z.record(z.union([z.record(z.number()), z.number()])).nullable(),
               })
               .passthrough(),
           ),
@@ -165,18 +163,14 @@ export const popularAppEntrySchema = z
     app_id: z.string(),
     app_name: z.string(),
     app_logo_url: z.string(),
-    preview_screens: z.array(
-      z.object({ id: z.string(), screenUrl: z.string() }).passthrough(),
-    ),
+    preview_screens: z.array(z.object({ id: z.string(), screenUrl: z.string() }).passthrough()),
     app_category: z.string(),
     secondary_app_categories: z.array(z.string()),
     popularity_metric: z.number(),
   })
   .passthrough();
 
-const autocompleteItemSchema = z
-  .object({ id: z.string(), type: z.string() })
-  .passthrough();
+const autocompleteItemSchema = z.object({ id: z.string(), type: z.string() }).passthrough();
 
 export const autocompleteResponseSchema = z
   .object({

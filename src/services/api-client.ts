@@ -24,6 +24,18 @@ import {
   dictionaryDefinitionsResponseSchema,
 } from "./schemas.js";
 import type { MobbinAuth } from "./auth.js";
+import type {
+  AppResult,
+  ScreenResult,
+  FlowResult,
+  Collection,
+  SearchableApp,
+  PopularAppEntry,
+  AutocompleteResponse,
+  DictionaryCategory,
+  ContentSearchResponse,
+  ValueResponse,
+} from "../types.js";
 
 /**
  * HTTP client for Mobbin's internal Next.js API routes.
@@ -103,7 +115,7 @@ export class MobbinApiClient {
     pageSize?: number;
     pageIndex?: number;
     sortBy?: string;
-  }) {
+  }): Promise<ContentSearchResponse<AppResult>> {
     return this.request("/api/content/search-apps", searchAppsResponseSchema, {
       method: "POST",
       body: {
@@ -135,7 +147,7 @@ export class MobbinApiClient {
     pageSize?: number;
     pageIndex?: number;
     sortBy?: string;
-  }) {
+  }): Promise<ContentSearchResponse<ScreenResult>> {
     return this.request("/api/content/search-screens", searchScreensResponseSchema, {
       method: "POST",
       body: {
@@ -168,7 +180,7 @@ export class MobbinApiClient {
     pageSize?: number;
     pageIndex?: number;
     sortBy?: string;
-  }) {
+  }): Promise<ContentSearchResponse<FlowResult>> {
     return this.request("/api/content/search-flows", searchFlowsResponseSchema, {
       method: "POST",
       body: {
@@ -192,7 +204,11 @@ export class MobbinApiClient {
    * Results contain only IDs; cross-reference with {@link getSearchableApps} for full details.
    * Endpoint: `POST /api/search-bar/search`
    */
-  async autocompleteSearch(params: { query: string; experience?: string; platform?: string }) {
+  async autocompleteSearch(params: {
+    query: string;
+    experience?: string;
+    platform?: string;
+  }): Promise<AutocompleteResponse> {
     return this.request("/api/search-bar/search", autocompleteResponseSchema, {
       method: "POST",
       body: {
@@ -208,7 +224,7 @@ export class MobbinApiClient {
    * This is a large response (~1000+ apps); results are cached by the Mobbin client.
    * Endpoint: `GET /api/searchable-apps/{platform}`
    */
-  async getSearchableApps(platform: string) {
+  async getSearchableApps(platform: string): Promise<SearchableApp[]> {
     return this.request(`/api/searchable-apps/${platform}`, searchableAppsResponseSchema);
   }
 
@@ -216,7 +232,10 @@ export class MobbinApiClient {
    * Get popular apps grouped by category with preview screenshots.
    * Endpoint: `POST /api/popular-apps/fetch-popular-apps-with-preview-screens`
    */
-  async getPopularApps(params: { platform: string; limitPerCategory?: number }) {
+  async getPopularApps(params: {
+    platform: string;
+    limitPerCategory?: number;
+  }): Promise<ValueResponse<PopularAppEntry[]>> {
     return this.request(
       "/api/popular-apps/fetch-popular-apps-with-preview-screens",
       popularAppsResponseSchema,
@@ -234,7 +253,7 @@ export class MobbinApiClient {
    * Fetch the authenticated user's saved collections with item counts.
    * Endpoint: `POST /api/collection/fetch-collections`
    */
-  async getCollections() {
+  async getCollections(): Promise<ValueResponse<Collection[]>> {
     return this.request("/api/collection/fetch-collections", collectionsResponseSchema, {
       method: "POST",
     });
@@ -245,7 +264,7 @@ export class MobbinApiClient {
    * UI elements, and flow actions with definitions and content counts.
    * Endpoint: `POST /api/filter-tags/fetch-dictionary-definitions`
    */
-  async getDictionaryDefinitions() {
+  async getDictionaryDefinitions(): Promise<ValueResponse<DictionaryCategory[]>> {
     return this.request(
       "/api/filter-tags/fetch-dictionary-definitions",
       dictionaryDefinitionsResponseSchema,

@@ -8,6 +8,8 @@ import type {
   flowResultSchema,
   collectionSchema,
   dictionaryCategorySchema,
+  popularAppEntrySchema,
+  autocompleteResponseSchema,
 } from "./services/schemas.js";
 
 /**
@@ -25,6 +27,8 @@ export type FlowScreen = z.infer<typeof flowScreenSchema>;
 export type FlowResult = z.infer<typeof flowResultSchema>;
 export type Collection = z.infer<typeof collectionSchema>;
 export type DictionaryCategory = z.infer<typeof dictionaryCategorySchema>;
+export type PopularAppEntry = z.infer<typeof popularAppEntrySchema>;
+export type AutocompleteResponse = z.infer<typeof autocompleteResponseSchema>;
 
 /** Pagination params used by all `/api/content/search-*` endpoints. */
 export interface PaginationOptions {

@@ -286,9 +286,7 @@ async function main() {
                 .flatMap(([type, platforms]) => {
                   // Two shapes in the wild: { type: { platform: count } } and { type: count }.
                   if (platforms && typeof platforms === "object") {
-                    return Object.entries(platforms).map(
-                      ([p, c]) => `${p} ${type}: ${c}`,
-                    );
+                    return Object.entries(platforms).map(([p, c]) => `${p} ${type}: ${c}`);
                   }
                   if (typeof platforms === "number") {
                     return [`${type}: ${platforms}`];
