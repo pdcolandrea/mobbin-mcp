@@ -25,6 +25,10 @@
     "mobbin",
     "design"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pdcolandrea/mobbin-mcp.git"
+  },
   "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
