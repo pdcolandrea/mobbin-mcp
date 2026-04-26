@@ -1,5 +1,11 @@
 import { CHARACTER_LIMIT } from "../constants.js";
-import type { AppResult, ScreenResult, FlowResult, Collection } from "../types.js";
+import type {
+  AppResult,
+  ScreenResult,
+  FlowResult,
+  Collection,
+  DictionaryCategory,
+} from "../types.js";
 
 export function formatApps(apps: AppResult[]): string {
   if (apps.length === 0) return "No apps found.";
@@ -136,6 +142,53 @@ export function formatScreenDetail(params: {
   lines.push(`- **Source URL**: ${params.screenUrl}`);
 
   return lines.join("\n");
+}
+
+type ContentCounts =
+  DictionaryCategory["subCategories"][number]["entries"][number]["contentCounts"];
+
+// Three shapes in the wild: { type: { platform: count } }, { type: count }, or null.
+// Originally proven inline by commit 23592d2; extracted so formatFilterFacet can reuse.
+export function formatContentCounts(counts: ContentCounts): string {
+  return Object.entries(counts ?? {})
+    .flatMap(([type, platforms]) => {
+      if (platforms && typeof platforms === "object") {
+        return Object.entries(platforms).map(([p, c]) => `${p} ${type}: ${c}`);
+      }
+      if (typeof platforms === "number") {
+        return [`${type}: ${platforms}`];
+      }
+      return [];
+    })
+    .join(", ");
+}
+
+export function formatFilterFacet(
+  categories: DictionaryCategory[],
+  opts: { includeDefinitions: boolean; includeCounts: boolean },
+): string {
+  const entries = categories
+    .flatMap((cat) => cat.subCategories ?? [])
+    .flatMap((sub) => sub.entries ?? [])
+    .filter((e) => !e.hidden);
+
+  if (entries.length === 0) return "No filter values found.";
+
+  if (!opts.includeDefinitions && !opts.includeCounts) {
+    return entries.map((e) => e.displayName).join("\n");
+  }
+
+  return entries
+    .map((e) => {
+      const parts = [`- **${e.displayName}**`];
+      if (opts.includeDefinitions && e.definition) parts.push(e.definition);
+      if (opts.includeCounts) {
+        const counts = formatContentCounts(e.contentCounts);
+        if (counts) parts.push(`(${counts})`);
+      }
+      return parts.join(" — ");
+    })
+    .join("\n");
 }
 
 function truncate(text: string): string {
