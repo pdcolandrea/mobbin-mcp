@@ -279,16 +279,25 @@ async function main() {
 
       const text = categories
         .map((cat) => {
-          const entries = cat.subCategories
-            .flatMap((sub) => sub.entries)
+          const entries = (cat.subCategories ?? [])
+            .flatMap((sub) => sub.entries ?? [])
             .filter((e) => !e.hidden)
             .map((e) => {
-              const counts = Object.entries(e.contentCounts)
-                .flatMap(([type, platforms]) =>
-                  Object.entries(platforms).map(([p, c]) => `${p} ${type}: ${c}`),
-                )
+              const counts = Object.entries(e.contentCounts ?? {})
+                .flatMap(([type, platforms]) => {
+                  // Two shapes in the wild: { type: { platform: count } } and { type: count }.
+                  if (platforms && typeof platforms === "object") {
+                    return Object.entries(platforms).map(
+                      ([p, c]) => `${p} ${type}: ${c}`,
+                    );
+                  }
+                  if (typeof platforms === "number") {
+                    return [`${type}: ${platforms}`];
+                  }
+                  return [];
+                })
                 .join(", ");
-              return `  - **${e.displayName}**: ${e.definition.substring(0, 80)}${e.definition.length > 80 ? "..." : ""} (${counts})`;
+              return `  - **${e.displayName}**: ${e.definition.substring(0, 80)}${e.definition.length > 80 ? "..." : ""}${counts ? ` (${counts})` : ""}`;
             });
 
           return `## ${cat.displayName} (${cat.experience})\nSlug: \`${cat.slug}\`\n${entries.join("\n")}`;

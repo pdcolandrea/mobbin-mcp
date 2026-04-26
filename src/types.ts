@@ -194,7 +194,7 @@ export interface DictionaryCategory {
       displayName: string;
       definition: string;
       hidden?: boolean;
-      contentCounts: Record<string, Record<string, number>>;
+      contentCounts: Record<string, Record<string, number> | number> | null;
     }>;
   }>;
 }
