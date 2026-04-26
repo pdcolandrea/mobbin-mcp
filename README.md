@@ -6,18 +6,18 @@ Mobbin has no public API. This server was built by reverse-engineering their int
 
 ## Tools
 
-| Tool                       | Description                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| `mobbin_search_apps`       | Search and browse apps by category and platform                                              |
-| `mobbin_search_screens`    | Search screens by UI patterns, elements, or text content                                     |
-| `mobbin_search_flows`      | Search user flows by action type (e.g., onboarding, checkout)                                |
-| `mobbin_quick_search`      | Fast autocomplete search for apps by name                                                    |
-| `mobbin_get_app_screens`   | Get every screen for one app (pair with `quick_search` to drill into a specific app)         |
-| `mobbin_get_app_flows`     | Get every user flow for one app (pair with `quick_search` to drill into a specific app)      |
-| `mobbin_popular_apps`      | Get popular apps grouped by category                                                         |
-| `mobbin_list_collections`  | List your saved collections                                                                  |
-| `mobbin_get_screen_detail` | Fetch a full screenshot image for a specific screen, with optional dominant color extraction |
-| `mobbin_get_filters`       | Get valid values for one filter facet — `kind: "categories" \| "patterns" \| "elements" \| "actions"` |
+| Tool                       | Description                                                                                  | Use when                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `mobbin_search_apps`       | Search and browse apps by category and platform                                              | You want catalog discovery by platform or category. Prefer `mobbin_quick_search` when you already know the app name and need its app ID. |
+| `mobbin_search_screens`    | Search screens by UI patterns, elements, or text content                                     | You want global screen inspiration across apps. Use `screen_patterns` for Mobbin taxonomy concepts and `screen_keywords` for visible/OCR text. Use `mobbin_get_app_screens` after `mobbin_quick_search` for one named app. |
+| `mobbin_search_flows`      | Search user flows by action type (e.g., onboarding, checkout)                                | You want global journey inspiration by action type. Prefer `mobbin_get_app_flows` after `mobbin_quick_search` for flows from one named app. |
+| `mobbin_quick_search`      | Fast autocomplete search for apps by name                                                    | You have an app name or likely app name and need its app ID. Prefer `mobbin_search_apps` for platform/category browsing. |
+| `mobbin_get_app_screens`   | Get every screen for one app (pair with `quick_search` to drill into a specific app)         | The user names a specific app and wants that app's screens. Prefer `mobbin_search_screens` for broad cross-app examples. |
+| `mobbin_get_app_flows`     | Get every user flow for one app (pair with `quick_search` to drill into a specific app)      | The user names a specific app and wants that app's flows. Prefer `mobbin_search_flows` for broad cross-app journeys. |
+| `mobbin_popular_apps`      | Get popular apps grouped by category                                                         | You want a category-grouped popularity snapshot. Prefer `mobbin_search_apps` with `sort_by: "publishedAt"` for paginated recent app browsing or category filters. |
+| `mobbin_list_collections`  | List your saved collections                                                                  | You need saved collection names, IDs, and app/screen/flow counts. This lists metadata only; collection item fetching is not available until `mobbin_get_collection` lands. |
+| `mobbin_get_screen_detail` | Fetch a full screenshot image for a specific screen, with optional dominant color extraction | You already have a `screen_url` and need the full image, visual inspection, metadata, or optional dominant color extraction. |
+| `mobbin_get_filters`       | Get valid values for one filter facet: `kind: "categories" \| "patterns" \| "elements" \| "actions"` | You need valid filter values or definitions before filling `categories`, `screen_patterns`, `screen_elements`, or `flow_actions` on search tools. |
 
 ### Drilling into a specific app
 
