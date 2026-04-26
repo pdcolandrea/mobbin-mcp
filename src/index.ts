@@ -86,7 +86,8 @@ async function main() {
   // --- Search Apps ---
   server.tool(
     "mobbin_search_apps",
-    "Search and browse apps on Mobbin by category and platform. Returns app names, logos, preview screens, and version IDs for deeper exploration.",
+    "Search and browse apps on Mobbin by category and platform. Returns app names, logos, preview screens, and version IDs for deeper exploration. " +
+      "Use when: you want catalog discovery by platform or category. Prefer mobbin_quick_search when you already know the app name and need its app_id.",
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
       categories: z
@@ -114,7 +115,8 @@ async function main() {
   // --- Search Screens ---
   server.tool(
     "mobbin_search_screens",
-    "Search screens across all apps on Mobbin. Filter by screen patterns (e.g., 'Login', 'Settings'), UI elements (e.g., 'Card', 'Table'), or text content. Returns screenshot URLs and metadata.",
+    "Search screens across all apps on Mobbin. Filter by screen patterns (e.g., 'Login', 'Settings'), UI elements (e.g., 'Card', 'Table'), or text content. Returns screenshot URLs and metadata. " +
+      "Use when: you want global screen inspiration across apps. Use screen_patterns for Mobbin taxonomy concepts, screen_keywords for visible/OCR text, and mobbin_get_app_screens after mobbin_quick_search when the user names a specific app.",
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
       screen_patterns: z
@@ -170,7 +172,8 @@ async function main() {
   // --- Search Flows ---
   server.tool(
     "mobbin_search_flows",
-    "Search user flows/journeys across all apps on Mobbin. Filter by flow actions (e.g., 'Creating Account', 'Editing Profile'). Returns flow screens with hotspot data for prototyping.",
+    "Search user flows/journeys across all apps on Mobbin. Filter by flow actions (e.g., 'Creating Account', 'Editing Profile'). Returns flow screens with hotspot data for prototyping. " +
+      "Use when: you want global journey inspiration by action type. Prefer mobbin_get_app_flows after mobbin_quick_search when the user asks about flows for a specific app.",
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
       flow_actions: z
@@ -202,7 +205,8 @@ async function main() {
   // --- Quick Search (Autocomplete) ---
   server.tool(
     "mobbin_quick_search",
-    "Quick autocomplete search for apps by name. Returns matching app IDs and names. Use this for fast lookup before fetching full details.",
+    "Quick autocomplete search for apps by name. Returns matching app IDs and names. Use this for fast lookup before fetching full details. " +
+      "Use when: you have an app name or likely app name and need its app_id. Prefer mobbin_search_apps for browsing apps by platform/category, then use the app_id with mobbin_get_app_screens or mobbin_get_app_flows for app-specific results.",
     {
       query: z.string().describe("Search query (app name or keyword)"),
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform to search"),
@@ -244,7 +248,8 @@ async function main() {
   // is the same source the Mobbin web UI uses.
   server.tool(
     "mobbin_get_app_screens",
-    "Get all screens for a specific app on Mobbin. Pair with mobbin_quick_search to drill into one app: quick_search → app_id → get_app_screens. Returns every screen for that app with patterns, elements, and dimensions.",
+    "Get all screens for a specific app on Mobbin. Pair with mobbin_quick_search to drill into one app: quick_search -> app_id -> get_app_screens. Returns every screen for that app with patterns, elements, and dimensions. " +
+      "Use when: the user names a specific app and wants that app's screens. Prefer mobbin_search_screens for broad cross-app examples by pattern, element, keyword, or category.",
     {
       app_id: z
         .string()
@@ -273,7 +278,8 @@ async function main() {
   // --- Get App Flows ---
   server.tool(
     "mobbin_get_app_flows",
-    "Get all user flows for a specific app on Mobbin. Pair with mobbin_quick_search: quick_search → app_id → get_app_flows. Returns each flow's screens with hotspot data for prototyping.",
+    "Get all user flows for a specific app on Mobbin. Pair with mobbin_quick_search: quick_search -> app_id -> get_app_flows. Returns each flow's screens with hotspot data for prototyping. " +
+      "Use when: the user names a specific app and wants that app's flows. Prefer mobbin_search_flows for broad cross-app journey examples by action or category.",
     {
       app_id: z
         .string()
@@ -302,7 +308,8 @@ async function main() {
   // --- Popular Apps ---
   server.tool(
     "mobbin_popular_apps",
-    "Get the most popular apps on Mobbin, grouped by category. Great for discovering trending design inspiration.",
+    "Get the most popular apps on Mobbin, grouped by category. Great for discovering trending design inspiration. " +
+      'Use when: you want a category-grouped popularity snapshot. Prefer mobbin_search_apps with sort_by: "publishedAt" when you need paginated recent app browsing or category filters.',
     {
       platform: z.enum(["ios", "android", "web"]).default("ios").describe("Platform"),
       limit_per_category: z.number().min(1).max(20).default(10).describe("Max apps per category"),
@@ -345,7 +352,8 @@ async function main() {
   // --- Collections ---
   server.tool(
     "mobbin_list_collections",
-    "List your saved Mobbin collections with item counts.",
+    "List your saved Mobbin collections with item counts. " +
+      "Use when: you need saved collection names, IDs, and app/screen/flow counts. This lists collection metadata only; collection item fetching is not available until mobbin_get_collection lands.",
     {},
     async () => {
       const result = await client.getCollections();
@@ -360,7 +368,8 @@ async function main() {
     "mobbin_get_filters",
     "Get valid values for one Mobbin filter facet (categories, patterns, elements, or actions). " +
       "Returns a plain newline list of names by default — pass include_definitions or include_counts to enrich. " +
-      "Use the result to build the appCategories/screenPatterns/screenElements/flowActions params on the search tools.",
+      "Use the result to build the categories, screen_patterns, screen_elements, or flow_actions params on the search tools. " +
+      "Use when: you need valid filter values or definitions instead of guessing names for any mobbin_search_* filter.",
     {
       kind: z
         .enum(["categories", "patterns", "elements", "actions"])
@@ -405,7 +414,8 @@ async function main() {
   // --- Get Screen Detail ---
   server.tool(
     "mobbin_get_screen_detail",
-    "Fetch a full screenshot image and metadata for a specific screen. Use a screenUrl from search_screens or search_flows results. Returns the actual image so you can see the UI design.",
+    "Fetch a full screenshot image and metadata for a specific screen. Use a screenUrl from search_screens, search_flows, or get_app_screens results. Returns the actual image so you can see the UI design. " +
+      "Use when: you already have a screen_url and need the full image, visual inspection, metadata, or optional dominant color extraction.",
     {
       screen_url: z
         .string()
