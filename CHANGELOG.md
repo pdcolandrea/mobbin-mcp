@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.8](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.0.7...v1.0.8) (2026-04-26)
+
+
+### Bug Fixes
+
+* correct FlowScreen type and formatter to match search-flows API ([439d3d7](https://github.com/pdcolandrea/mobbin-mcp/commit/439d3d7623453723f6d8abd768e056ee2ad6e63f))
+
 ## [1.0.7](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.0.6...v1.0.7) (2026-04-26)
 
 
