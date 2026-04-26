@@ -175,10 +175,10 @@ export function formatFilterFacet(
   if (entries.length === 0) return "No filter values found.";
 
   if (!opts.includeDefinitions && !opts.includeCounts) {
-    return entries.map((e) => e.displayName).join("\n");
+    return truncate(entries.map((e) => e.displayName).join("\n"));
   }
 
-  return entries
+  const text = entries
     .map((e) => {
       const parts = [`- **${e.displayName}**`];
       if (opts.includeDefinitions && e.definition) parts.push(e.definition);
@@ -189,6 +189,7 @@ export function formatFilterFacet(
       return parts.join(" — ");
     })
     .join("\n");
+  return truncate(text);
 }
 
 function truncate(text: string): string {
