@@ -15,7 +15,17 @@ Mobbin has no public API. This server was built by reverse-engineering their int
 | `mobbin_popular_apps`      | Get popular apps grouped by category                                                         |
 | `mobbin_list_collections`  | List your saved collections                                                                  |
 | `mobbin_get_screen_detail` | Fetch a full screenshot image for a specific screen, with optional dominant color extraction |
-| `mobbin_get_filters`       | Get all available filter values (categories, patterns, elements, actions)                    |
+| `mobbin_get_filters`       | Get valid values for one filter facet — `kind: "categories" \| "patterns" \| "elements" \| "actions"` |
+
+### Migration: `mobbin_get_filters`
+
+The no-arg form was removed. The full taxonomy in one response exceeded the MCP per-tool-result token cap and forced the agent to read the result back from a temp file. Pass a `kind` to scope the response to one facet:
+
+```ts
+mobbin_get_filters({ kind: "patterns" })                               // newline list of names
+mobbin_get_filters({ kind: "patterns", include_definitions: true })    // bullets with descriptions
+mobbin_get_filters({ kind: "patterns", include_counts: true })         // bullets with content counts
+```
 
 ## Setup
 

@@ -11,9 +11,26 @@ import {
   formatFlows,
   formatCollections,
   formatScreenDetail,
+  formatFilterFacet,
 } from "./utils/formatting.js";
 import { DEFAULT_PAGE_SIZE } from "./constants.js";
+import type { DictionaryCategory } from "./types.js";
 import { readStoredSession, writeStoredSession } from "./utils/auth-store.js";
+
+type FilterKind = "categories" | "patterns" | "elements" | "actions";
+
+// Substring match on the upstream category slug. Loose on purpose: the API has
+// shipped a few different slug formats (`app_categories` vs `appCategories`),
+// and a substring keeps us resilient. If we ever see a kind match zero or
+// multiple categories in practice, tighten to exact strings here.
+const KIND_MATCHERS: Record<FilterKind, (slug: string) => boolean> = {
+  categories: (s) => s.includes("categor"),
+  patterns: (s) => s.includes("pattern"),
+  elements: (s) => s.includes("element"),
+  actions: (s) => s.includes("action"),
+};
+
+const DICT_TTL_MS = 60 * 60 * 1000;
 
 async function main() {
   // CLI subcommand routing
@@ -49,6 +66,14 @@ async function main() {
   }
 
   const client = new MobbinApiClient(auth);
+
+  let dictCache: { at: number; value: DictionaryCategory[] } | null = null;
+  async function getDictionary(): Promise<DictionaryCategory[]> {
+    if (dictCache && Date.now() - dictCache.at < DICT_TTL_MS) return dictCache.value;
+    const result = await client.getDictionaryDefinitions();
+    dictCache = { at: Date.now(), value: result.value };
+    return dictCache.value;
+  }
 
   const server = new McpServer({
     name: "mobbin",
@@ -270,38 +295,47 @@ async function main() {
   // --- Filter Taxonomy ---
   server.tool(
     "mobbin_get_filters",
-    "Get all available filter options for Mobbin search — app categories, screen patterns, UI elements, and flow actions. Use this to discover valid filter values for other search tools.",
-    {},
-    async () => {
-      const result = await client.getDictionaryDefinitions();
-      const categories = result.value;
-
-      const text = categories
-        .map((cat) => {
-          const entries = (cat.subCategories ?? [])
-            .flatMap((sub) => sub.entries ?? [])
-            .filter((e) => !e.hidden)
-            .map((e) => {
-              const counts = Object.entries(e.contentCounts ?? {})
-                .flatMap(([type, platforms]) => {
-                  // Two shapes in the wild: { type: { platform: count } } and { type: count }.
-                  if (platforms && typeof platforms === "object") {
-                    return Object.entries(platforms).map(([p, c]) => `${p} ${type}: ${c}`);
-                  }
-                  if (typeof platforms === "number") {
-                    return [`${type}: ${platforms}`];
-                  }
-                  return [];
-                })
-                .join(", ");
-              return `  - **${e.displayName}**: ${e.definition.substring(0, 80)}${e.definition.length > 80 ? "..." : ""}${counts ? ` (${counts})` : ""}`;
-            });
-
-          return `## ${cat.displayName} (${cat.experience})\nSlug: \`${cat.slug}\`\n${entries.join("\n")}`;
-        })
-        .join("\n\n");
-
-      return { content: [{ type: "text", text }] };
+    "Get valid values for one Mobbin filter facet (categories, patterns, elements, or actions). " +
+      "Returns a plain newline list of names by default — pass include_definitions or include_counts to enrich. " +
+      "Use the result to build the appCategories/screenPatterns/screenElements/flowActions params on the search tools.",
+    {
+      kind: z
+        .enum(["categories", "patterns", "elements", "actions"])
+        .describe(
+          "Which filter facet to fetch. Use the kind matching the search-tool param you're filling: " +
+            "'categories' → appCategories, 'patterns' → screenPatterns, " +
+            "'elements' → screenElements, 'actions' → flowActions.",
+        ),
+      include_definitions: z
+        .boolean()
+        .default(false)
+        .describe(
+          "Include the human-readable definition for each value. Off by default to keep the response small.",
+        ),
+      include_counts: z
+        .boolean()
+        .default(false)
+        .describe(
+          "Include per-tag content counts. Off by default — counts aren't needed to construct queries.",
+        ),
+    },
+    async ({ kind, include_definitions, include_counts }) => {
+      try {
+        const all = await getDictionary();
+        const matcher = KIND_MATCHERS[kind];
+        const matched = all.filter((cat) => matcher(cat.slug.toLowerCase()));
+        const text = formatFilterFacet(matched, {
+          includeDefinitions: include_definitions,
+          includeCounts: include_counts,
+        });
+        return { content: [{ type: "text", text }] };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: "text" as const, text: `Failed to fetch filters: ${message}` }],
+          isError: true,
+        };
+      }
     },
   );
 
