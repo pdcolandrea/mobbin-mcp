@@ -13,7 +13,6 @@ import {
   formatScreenDetail,
 } from "./utils/formatting.js";
 import { DEFAULT_PAGE_SIZE } from "./constants.js";
-import type { DictionaryCategory } from "./types.js";
 import { readStoredSession, writeStoredSession } from "./utils/auth-store.js";
 
 async function main() {
@@ -275,7 +274,7 @@ async function main() {
     {},
     async () => {
       const result = await client.getDictionaryDefinitions();
-      const categories = result.value as DictionaryCategory[];
+      const categories = result.value;
 
       const text = categories
         .map((cat) => {

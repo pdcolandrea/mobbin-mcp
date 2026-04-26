@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { z } from "zod";
 import {
   MOBBIN_BASE_URL,
   ALLOWED_IMAGE_HOSTS,
@@ -12,15 +13,16 @@ import {
   COLOR_QUANTIZE_STEP,
   COLOR_QUANTIZE_MAX,
 } from "../constants.js";
-import type {
-  AppResult,
-  ScreenResult,
-  FlowResult,
-  Collection,
-  SearchableApp,
-  ContentSearchResponse,
-  ValueResponse,
-} from "../types.js";
+import {
+  searchAppsResponseSchema,
+  searchScreensResponseSchema,
+  searchFlowsResponseSchema,
+  autocompleteResponseSchema,
+  searchableAppsResponseSchema,
+  popularAppsResponseSchema,
+  collectionsResponseSchema,
+  dictionaryDefinitionsResponseSchema,
+} from "./schemas.js";
 import type { MobbinAuth } from "./auth.js";
 
 /**
@@ -39,11 +41,18 @@ export class MobbinApiClient {
     this.auth = auth;
   }
 
-  /** Make an authenticated request to a Mobbin API route. Automatically uses a fresh token. */
-  private async request<T>(
+  /**
+   * Make an authenticated request to a Mobbin API route and validate the response against a zod schema.
+   *
+   * On validation failure the thrown error names the request path AND each failing field
+   * (e.g. `value.data[0].screenPatterns: Required`) so shape drift surfaces at the boundary
+   * instead of crashing several layers later in a formatter.
+   */
+  private async request<S extends z.ZodTypeAny>(
     path: string,
+    schema: S,
     options: { method?: string; body?: unknown } = {},
-  ): Promise<T> {
+  ): Promise<z.infer<S>> {
     const { method = "GET", body } = options;
     const cookie = await this.auth.getCookieValue();
 
@@ -68,7 +77,20 @@ export class MobbinApiClient {
       );
     }
 
-    return res.json() as Promise<T>;
+    const json = await res.json();
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .map((issue) => {
+          const issuePath = issue.path.length ? issue.path.join(".") : "(root)";
+          return `  ${issuePath}: ${issue.message}`;
+        })
+        .join("\n");
+      throw new Error(`Mobbin API response failed validation for ${path}:\n${issues}`, {
+        cause: parsed.error,
+      });
+    }
+    return parsed.data;
   }
 
   /**
@@ -81,8 +103,8 @@ export class MobbinApiClient {
     pageSize?: number;
     pageIndex?: number;
     sortBy?: string;
-  }): Promise<ContentSearchResponse<AppResult>> {
-    return this.request("/api/content/search-apps", {
+  }) {
+    return this.request("/api/content/search-apps", searchAppsResponseSchema, {
       method: "POST",
       body: {
         searchRequestId: "",
@@ -113,8 +135,8 @@ export class MobbinApiClient {
     pageSize?: number;
     pageIndex?: number;
     sortBy?: string;
-  }): Promise<ContentSearchResponse<ScreenResult>> {
-    return this.request("/api/content/search-screens", {
+  }) {
+    return this.request("/api/content/search-screens", searchScreensResponseSchema, {
       method: "POST",
       body: {
         searchRequestId: "",
@@ -146,8 +168,8 @@ export class MobbinApiClient {
     pageSize?: number;
     pageIndex?: number;
     sortBy?: string;
-  }): Promise<ContentSearchResponse<FlowResult>> {
-    return this.request("/api/content/search-flows", {
+  }) {
+    return this.request("/api/content/search-flows", searchFlowsResponseSchema, {
       method: "POST",
       body: {
         searchRequestId: "",
@@ -170,20 +192,8 @@ export class MobbinApiClient {
    * Results contain only IDs; cross-reference with {@link getSearchableApps} for full details.
    * Endpoint: `POST /api/search-bar/search`
    */
-  async autocompleteSearch(params: {
-    query: string;
-    experience?: string;
-    platform?: string;
-  }): Promise<{
-    value: {
-      experience: string;
-      primary: Array<{ id: string; type: string }>;
-      other: Array<{ id: string; type: string }>;
-      secondaryPlatform: Array<{ id: string; type: string }>;
-      sites: Array<{ id: string; type: string }>;
-    };
-  }> {
-    return this.request("/api/search-bar/search", {
+  async autocompleteSearch(params: { query: string; experience?: string; platform?: string }) {
+    return this.request("/api/search-bar/search", autocompleteResponseSchema, {
       method: "POST",
       body: {
         query: params.query,
@@ -198,42 +208,34 @@ export class MobbinApiClient {
    * This is a large response (~1000+ apps); results are cached by the Mobbin client.
    * Endpoint: `GET /api/searchable-apps/{platform}`
    */
-  async getSearchableApps(platform: string): Promise<SearchableApp[]> {
-    return this.request(`/api/searchable-apps/${platform}`);
+  async getSearchableApps(platform: string) {
+    return this.request(`/api/searchable-apps/${platform}`, searchableAppsResponseSchema);
   }
 
   /**
    * Get popular apps grouped by category with preview screenshots.
    * Endpoint: `POST /api/popular-apps/fetch-popular-apps-with-preview-screens`
    */
-  async getPopularApps(params: { platform: string; limitPerCategory?: number }): Promise<
-    ValueResponse<
-      Array<{
-        app_id: string;
-        app_name: string;
-        app_logo_url: string;
-        preview_screens: Array<{ id: string; screenUrl: string }>;
-        app_category: string;
-        secondary_app_categories: string[];
-        popularity_metric: number;
-      }>
-    >
-  > {
-    return this.request("/api/popular-apps/fetch-popular-apps-with-preview-screens", {
-      method: "POST",
-      body: {
-        platform: params.platform,
-        limitPerCategory: params.limitPerCategory ?? 10,
+  async getPopularApps(params: { platform: string; limitPerCategory?: number }) {
+    return this.request(
+      "/api/popular-apps/fetch-popular-apps-with-preview-screens",
+      popularAppsResponseSchema,
+      {
+        method: "POST",
+        body: {
+          platform: params.platform,
+          limitPerCategory: params.limitPerCategory ?? 10,
+        },
       },
-    });
+    );
   }
 
   /**
    * Fetch the authenticated user's saved collections with item counts.
    * Endpoint: `POST /api/collection/fetch-collections`
    */
-  async getCollections(): Promise<ValueResponse<Collection[]>> {
-    return this.request("/api/collection/fetch-collections", {
+  async getCollections() {
+    return this.request("/api/collection/fetch-collections", collectionsResponseSchema, {
       method: "POST",
     });
   }
@@ -243,11 +245,15 @@ export class MobbinApiClient {
    * UI elements, and flow actions with definitions and content counts.
    * Endpoint: `POST /api/filter-tags/fetch-dictionary-definitions`
    */
-  async getDictionaryDefinitions(): Promise<ValueResponse<unknown>> {
-    return this.request("/api/filter-tags/fetch-dictionary-definitions", {
-      method: "POST",
-      body: {},
-    });
+  async getDictionaryDefinitions() {
+    return this.request(
+      "/api/filter-tags/fetch-dictionary-definitions",
+      dictionaryDefinitionsResponseSchema,
+      {
+        method: "POST",
+        body: {},
+      },
+    );
   }
 
   /**
