@@ -94,8 +94,15 @@ export class MobbinApiClient {
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
+      // If we already tried (and failed) to refresh locally and Mobbin couldn't
+      // rotate either, surface both pieces — the user almost certainly needs
+      // to re-auth or upgrade.
+      const refreshErr = this.auth.getLastRefreshError();
+      const refreshNote = refreshErr
+        ? `\nLocal Supabase refresh also failed: ${refreshErr.message}`
+        : "";
       throw new Error(
-        `Mobbin API error: ${res.status} ${res.statusText} - ${path}${text ? `: ${text.substring(0, 200)}` : ""}`,
+        `Mobbin API error: ${res.status} ${res.statusText} - ${path}${text ? `: ${text.substring(0, 200)}` : ""}${refreshNote}`,
       );
     }
 

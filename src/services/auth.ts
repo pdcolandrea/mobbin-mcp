@@ -35,6 +35,7 @@ export class MobbinAuth {
   private rawCookie: string;
   private refreshPromise: Promise<void> | null = null;
   private onSessionRefreshed?: (session: SupabaseSession) => void;
+  private lastRefreshError: Error | null = null;
 
   private constructor(
     session: SupabaseSession,
@@ -67,11 +68,31 @@ export class MobbinAuth {
     return this.session;
   }
 
+  /**
+   * Returns the cookie string for the next request. If the local Supabase
+   * refresh path fails (e.g. the embedded publishable key was rotated), we
+   * deliberately fall through with the existing cookie rather than throwing:
+   * Mobbin's Next middleware can refresh the session server-side from the
+   * refresh token in the same cookie, and {@link consumeResponseCookies}
+   * will adopt the rotated chunks. The error is stashed in
+   * {@link lastRefreshError} so the caller can wrap it into the final user
+   * message if Mobbin also fails to recover.
+   */
   async getCookieValue(): Promise<string> {
     if (this.isExpiringSoon()) {
-      await this.refresh();
+      try {
+        await this.refresh();
+        this.lastRefreshError = null;
+      } catch (err) {
+        this.lastRefreshError = err instanceof Error ? err : new Error(String(err));
+      }
     }
     return this.rawCookie;
+  }
+
+  /** Last error from the local Supabase refresh path, if it failed and Mobbin hasn't recovered since. */
+  getLastRefreshError(): Error | null {
+    return this.lastRefreshError;
   }
 
   /**
@@ -127,6 +148,7 @@ export class MobbinAuth {
 
     this.session = newSession;
     this.rawCookie = MobbinAuth.buildCookieString(newSession);
+    this.lastRefreshError = null;
     this.onSessionRefreshed?.(newSession);
   }
 
