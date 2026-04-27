@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.1.0...v1.2.0) (2026-04-27)
+
+
+### Features
+
+* add mobbin_get_collection to fetch saved collection items ([#29](https://github.com/pdcolandrea/mobbin-mcp/issues/29)) ([ba2a5cc](https://github.com/pdcolandrea/mobbin-mcp/commit/ba2a5cca0a6fd8272c88ac3abe1b3b1fefeeb2be)), closes [#17](https://github.com/pdcolandrea/mobbin-mcp/issues/17)
+
 ## [1.1.0](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.0.8...v1.1.0) (2026-04-26)
 
 
