@@ -19,7 +19,7 @@ export const COLOR_QUANTIZE_MAX = 248;
  * To find this yourself: open mobbin.com, DevTools → Network → filter for "supabase" →
  * check the `apikey` header on any request to ujasntkfphywizsdaapi.supabase.co.
  */
-export const SUPABASE_ANON_KEY = "sb_publishable_LbI2-4spKrYx1xHKrI4YyQ_rC-csyUz";
+export const SUPABASE_ANON_KEY = "sb_publishable_YptnKskI90SD2g25sAvVxQ_tZltjYFE";
 
 /**
  * Cookie name prefix used by Supabase for this project.
