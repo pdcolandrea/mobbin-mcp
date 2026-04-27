@@ -86,6 +86,12 @@ export class MobbinApiClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
 
+    // Mobbin's middleware rotates the Supabase session on most authed responses.
+    // Adopt the rotated cookies so our stored expires_at stays fresh and the
+    // Supabase-side refresh path (which depends on the embedded publishable key)
+    // almost never has to fire.
+    this.auth.consumeResponseCookies(res.headers.getSetCookie());
+
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(
@@ -316,6 +322,9 @@ export class MobbinApiClient {
       },
       redirect: "follow",
     });
+
+    this.auth.consumeResponseCookies(res.headers.getSetCookie());
+
     if (!res.ok) {
       throw new Error(`Mobbin app page fetch failed: ${res.status} ${res.statusText} - ${path}`);
     }

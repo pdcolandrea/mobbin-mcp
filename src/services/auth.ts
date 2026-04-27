@@ -74,6 +74,62 @@ export class MobbinAuth {
     return this.rawCookie;
   }
 
+  /**
+   * Inspect a response's Set-Cookie headers and, if Mobbin's Next middleware
+   * rotated the Supabase session, adopt the new chunks in place.
+   *
+   * Mobbin's middleware calls `supabase.auth.getUser()` server-side, which
+   * refreshes the session whenever the access token is near or past expiry
+   * and writes the rotated value back as `sb-...-auth-token.0/.1/...`
+   * Set-Cookie chunks. Capturing those keeps `expires_at` fresh, so the
+   * local Supabase refresh path (which depends on {@link SUPABASE_ANON_KEY})
+   * almost never has to run — making us resilient to anon-key rotations.
+   *
+   * Silently no-ops when no relevant cookies are present, when the value is
+   * unchanged, when chunks fail to parse (treat as partial / unrelated), or
+   * when Mobbin sends a deletion (sign-out).
+   */
+  consumeResponseCookies(setCookies: readonly string[]): void {
+    if (setCookies.length === 0) return;
+
+    const relevant: Record<string, string> = {};
+    for (const raw of setCookies) {
+      const head = raw.split(";", 1)[0]?.trim() ?? "";
+      const eqIdx = head.indexOf("=");
+      if (eqIdx <= 0) continue;
+      const name = head.slice(0, eqIdx);
+      const value = head.slice(eqIdx + 1);
+      if (name !== SUPABASE_COOKIE_PREFIX && !name.startsWith(`${SUPABASE_COOKIE_PREFIX}.`)) {
+        continue;
+      }
+      // Skip cookie deletions (sign-out, or chunks-shrinking). parseSessionFromCookie
+      // walks `.0`, `.1`, ... until the first gap, so omitting deleted chunks
+      // matches what Supabase SSR would reassemble.
+      if (value === "" || /(?:^|;\s*)Max-Age\s*=\s*0\b/i.test(raw)) continue;
+      relevant[name] = value;
+    }
+
+    if (Object.keys(relevant).length === 0) return;
+
+    const cookieString = Object.entries(relevant)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("; ");
+
+    let newSession: SupabaseSession;
+    try {
+      newSession = MobbinAuth.parseSessionFromCookie(cookieString);
+    } catch {
+      // Partial chunks or unrelated cookies — wait for a future response.
+      return;
+    }
+
+    if (newSession.access_token === this.session.access_token) return;
+
+    this.session = newSession;
+    this.rawCookie = MobbinAuth.buildCookieString(newSession);
+    this.onSessionRefreshed?.(newSession);
+  }
+
   /** True if the access token expires within {@link TOKEN_REFRESH_BUFFER_SECONDS}. */
   private isExpiringSoon(): boolean {
     const nowSeconds = Math.floor(Date.now() / 1000);
