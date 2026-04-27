@@ -4,6 +4,7 @@ import type {
   ScreenResult,
   FlowResult,
   Collection,
+  CollectionItem,
   DictionaryCategory,
   AppPageScreen,
 } from "../types.js";
@@ -102,6 +103,73 @@ export function formatFlows(flows: FlowResult[]): string {
     ]
       .filter(Boolean)
       .join("\n");
+  });
+
+  return truncate(lines.join("\n\n"));
+}
+
+/**
+ * Render a heterogenous list of saved-collection items (apps, screens, flows)
+ * with a `type` tag on each entry so the agent can disambiguate. Mirrors the
+ * field set used by `formatScreens` / `formatFlows` so screen URLs are
+ * directly usable downstream (e.g., as input to `mobbin_get_screen_detail`).
+ */
+export function formatCollectionItems(items: CollectionItem[]): string {
+  if (items.length === 0) return "No items in this section.";
+
+  const lines = items.map((item, i) => {
+    if (item.contentType === "screens" && item.screen) {
+      const s = item.screen;
+      return [
+        `### ${i + 1}. [screen] ${s.appName} — ${s.screenPatterns.join(", ") || "Screen"}`,
+        `- **App**: ${s.appName} (${s.platform})`,
+        `- **Patterns**: ${s.screenPatterns.join(", ") || "None"}`,
+        `- **Elements**: ${s.screenElements.join(", ") || "None"}`,
+        `- **Screen URL**: ${s.screenUrl}`,
+        `- **Screen ID**: ${s.id}`,
+        `- **App ID**: ${s.appId}`,
+        `- **Dimensions**: ${s.width}x${s.height}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    if (item.contentType === "flows" && item.flow) {
+      const f = item.flow;
+      const screenList = f.screens
+        .slice(0, 5)
+        .map((s, j) => {
+          const hotspot = s.hotspotX !== null ? " [hotspot]" : "";
+          return `  ${j + 1}.${hotspot} ${s.screenUrl}`;
+        })
+        .join("\n");
+      return [
+        `### ${i + 1}. [flow] ${f.name} — ${f.appName}`,
+        `- **App**: ${f.appName} (${f.platform})`,
+        `- **Actions**: ${f.actions.join(", ") || "None"}`,
+        `- **Flow ID**: ${f.id}`,
+        `- **Screens** (${f.screens.length} total):`,
+        screenList,
+        f.screens.length > 5 ? `  ... and ${f.screens.length - 5} more screens` : "",
+        f.videoUrl ? `- **Video**: ${f.videoUrl}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    if (item.contentType === "apps" && item.app) {
+      const a = item.app;
+      return [
+        `### ${i + 1}. [app] ${a.appName}`,
+        a.appTagline ? `- **Tagline**: ${a.appTagline}` : "",
+        `- **Platform**: ${a.platform}`,
+        `- **App ID**: ${a.id}`,
+        a.appLogoUrl ? `- **Logo**: ${a.appLogoUrl}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+    // Fallback for unhandled contentTypes (sites/sections aren't surfaced through
+    // the search tools yet, so skip detail rendering and just record the type).
+    return `### ${i + 1}. [${item.contentType}] (saved item id: ${item.id})`;
   });
 
   return truncate(lines.join("\n\n"));

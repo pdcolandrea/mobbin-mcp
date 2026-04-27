@@ -7,6 +7,10 @@ import type {
   flowScreenSchema,
   flowResultSchema,
   collectionSchema,
+  collectionItemSchema,
+  collectionItemScreenSchema,
+  collectionItemFlowSchema,
+  collectionItemAppSchema,
   dictionaryCategorySchema,
   popularAppEntrySchema,
   autocompleteResponseSchema,
@@ -27,6 +31,16 @@ export type ScreenResult = z.infer<typeof screenResultSchema>;
 export type FlowScreen = z.infer<typeof flowScreenSchema>;
 export type FlowResult = z.infer<typeof flowResultSchema>;
 export type Collection = z.infer<typeof collectionSchema>;
+export type CollectionItem = z.infer<typeof collectionItemSchema>;
+export type CollectionItemScreen = z.infer<typeof collectionItemScreenSchema>;
+export type CollectionItemFlow = z.infer<typeof collectionItemFlowSchema>;
+export type CollectionItemApp = z.infer<typeof collectionItemAppSchema>;
+
+/** Keyset cursor returned by `getCollectionContents` for pagination. */
+export interface CollectionCursor {
+  lastCreatedAt: string;
+  lastId: string;
+}
 export type DictionaryCategory = z.infer<typeof dictionaryCategorySchema>;
 export type PopularAppEntry = z.infer<typeof popularAppEntrySchema>;
 export type AutocompleteResponse = z.infer<typeof autocompleteResponseSchema>;
