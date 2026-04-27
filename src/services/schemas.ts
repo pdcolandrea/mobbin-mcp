@@ -134,6 +134,101 @@ export const collectionSchema = z
   })
   .passthrough();
 
+/**
+ * Item shape returned by `/collections/api/fetch-collection-contents`.
+ *
+ * The envelope is the same for every contentType — what varies is which inner
+ * payload key is populated (`screen`, `flow`, `app`, etc.) and which FK column
+ * is non-null (`app_screen_id`, `app_flow_id`, ...). The inner payloads are
+ * close to the search-API shapes but trimmed differently (for example, the
+ * `screen` payload exposes top-level `width`/`height` instead of `metadata`,
+ * and lacks `appCategory`/`popularityMetric`/`screenNumber`), so we keep them
+ * as `unknown()` and validate just the fields the formatter consumes.
+ */
+export const collectionItemScreenSchema = z
+  .object({
+    id: z.string(),
+    appId: z.string(),
+    appName: z.string(),
+    platform: z.string(),
+    screenUrl: z.string(),
+    width: z.number(),
+    height: z.number(),
+    screenPatterns: z.array(z.string()),
+    screenElements: z.array(z.string()),
+    appLogoUrl: z.string().optional(),
+    fullpageScreenUrl: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const collectionItemFlowSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    appId: z.string(),
+    appName: z.string(),
+    platform: z.string(),
+    actions: z.array(z.string()),
+    videoUrl: z.string().nullable(),
+    screens: z.array(flowScreenSchema),
+  })
+  .passthrough();
+
+export const collectionItemAppSchema = z
+  .object({
+    id: z.string(),
+    appName: z.string(),
+    platform: z.string(),
+    appLogoUrl: z.string().optional(),
+    appTagline: z.string().optional(),
+  })
+  .passthrough();
+
+export const collectionItemSchema = z
+  .object({
+    id: z.string(),
+    collection_id: z.string(),
+    contentType: z.string(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    app_id: z.string().nullable(),
+    app_screen_id: z.string().nullable(),
+    app_flow_id: z.string().nullable(),
+    site_id: z.string().nullable(),
+    site_page_section_id: z.string().nullable(),
+    screen: collectionItemScreenSchema.optional(),
+    flow: collectionItemFlowSchema.optional(),
+    app: collectionItemAppSchema.optional(),
+  })
+  .passthrough();
+
+/**
+ * Successful response from `/collections/api/fetch-collection-contents`.
+ *
+ * The endpoint also returns HTTP 200 with `{ error: { message, code } }` for
+ * server-side failures (e.g., unknown `collectionId` -> "query error"). Those
+ * are turned into thrown errors by the API client so they surface at the call
+ * site instead of silently parsing as an empty result.
+ */
+export const collectionContentsResponseSchema = z
+  .object({
+    value: z
+      .object({
+        data: z.array(collectionItemSchema),
+        pageSize: z.number().optional(),
+      })
+      .passthrough()
+      .optional(),
+    error: z
+      .object({
+        message: z.string(),
+        code: z.string().optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
 export const dictionaryCategorySchema = z
   .object({
     slug: z.string(),

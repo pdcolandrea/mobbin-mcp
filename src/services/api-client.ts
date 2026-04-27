@@ -21,6 +21,7 @@ import {
   searchableAppsResponseSchema,
   popularAppsResponseSchema,
   collectionsResponseSchema,
+  collectionContentsResponseSchema,
   dictionaryDefinitionsResponseSchema,
   appPagePayloadSchema,
   appPageScreenSchema,
@@ -32,6 +33,8 @@ import type {
   ScreenResult,
   FlowResult,
   Collection,
+  CollectionItem,
+  CollectionCursor,
   SearchableApp,
   PopularAppEntry,
   AutocompleteResponse,
@@ -261,6 +264,67 @@ export class MobbinApiClient {
     return this.request("/api/collection/fetch-collections", collectionsResponseSchema, {
       method: "POST",
     });
+  }
+
+  /**
+   * Fetch one page of items inside a saved collection.
+   *
+   * Mobbin's web client buckets collection contents along two axes — `contentType`
+   * ({apps, screens, flows, sites, sections}) and `platformType` ({mobile, web}) —
+   * and pages each bucket independently using a keyset cursor. Pass `cursor: null`
+   * for the first page; for subsequent pages echo back the `nextCursor` returned
+   * by the previous call. Last-page detection: `nextCursor === null` (a short
+   * page).
+   *
+   * Errors come back as HTTP 200 with a server-side `{ error: { message } }`
+   * payload (e.g. unknown `collectionId` → "query error"); we promote those to
+   * thrown errors here so callers don't silently see an empty list.
+   *
+   * Endpoint: `POST /collections/api/fetch-collection-contents`
+   */
+  async getCollectionContents(params: {
+    collectionId: string;
+    contentType: "apps" | "screens" | "flows";
+    platformType: "mobile" | "web";
+    pageSize?: number;
+    cursor?: CollectionCursor | null;
+  }): Promise<{ items: CollectionItem[]; nextCursor: CollectionCursor | null }> {
+    const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
+    const result = await this.request(
+      "/collections/api/fetch-collection-contents",
+      collectionContentsResponseSchema,
+      {
+        method: "POST",
+        body: {
+          collectionId: params.collectionId,
+          contentType: params.contentType,
+          platformType: params.platformType,
+          paginationOptions: {
+            keysetPagination: params.cursor ?? {},
+            pageSize,
+          },
+        },
+      },
+    );
+
+    if (result.error) {
+      throw new Error(
+        `Mobbin collection-contents error (${result.error.code ?? "unknown"}): ${result.error.message}`,
+      );
+    }
+    if (!result.value) {
+      throw new Error("Mobbin collection-contents returned neither value nor error.");
+    }
+
+    const items = result.value.data;
+    const last = items[items.length - 1];
+    // The web client treats "page is full" as "there might be more". Apply the
+    // same rule so we never report exhausted when there's an exact-multiple boundary.
+    const nextCursor =
+      items.length === pageSize && last
+        ? { lastCreatedAt: last.created_at, lastId: last.id }
+        : null;
+    return { items, nextCursor };
   }
 
   /**

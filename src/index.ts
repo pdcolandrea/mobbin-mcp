@@ -10,6 +10,7 @@ import {
   formatScreens,
   formatFlows,
   formatCollections,
+  formatCollectionItems,
   formatScreenDetail,
   formatFilterFacet,
   formatAppPageScreens,
@@ -337,12 +338,101 @@ async function main() {
   server.tool(
     "mobbin_list_collections",
     "List your saved Mobbin collections with item counts. " +
-      "Use when: you need saved collection names, IDs, and app/screen/flow counts. This lists collection metadata only; collection item fetching is not available until mobbin_get_collection lands.",
+      "Use when: you need saved collection names, IDs, and app/screen/flow counts. " +
+      "Then call mobbin_get_collection with one of the returned IDs to enumerate the items inside.",
     {},
     async () => {
       const result = await client.getCollections();
       return {
         content: [{ type: "text", text: formatCollections(result.value) }],
+      };
+    },
+  );
+
+  // --- Get Collection Contents ---
+  // Mobbin pages collection contents per (contentType, platformType) bucket
+  // with a keyset cursor. By default we fetch the first page of every bucket
+  // hinted by the caller (or all of apps/screens/flows) and merge them so the
+  // agent can show a saved collection in one tool call. To page deeper inside
+  // a single bucket, pass `content_type` + `cursor`.
+  server.tool(
+    "mobbin_get_collection",
+    "Get the items saved inside a specific Mobbin collection (apps, screens, and/or flows). " +
+      "Pair with mobbin_list_collections to find the collection_id first. " +
+      "Returns items with the same screen URLs and IDs you'd get from mobbin_search_screens / mobbin_search_flows, so you can pass them straight to mobbin_get_screen_detail. " +
+      "Use when: the user asks about a saved collection's contents, or you want to enumerate / display what's inside one. " +
+      "For paging inside a single bucket, pass content_type plus the cursor returned in the previous response.",
+    {
+      collection_id: z.string().uuid().describe("Collection ID from mobbin_list_collections"),
+      platform: z
+        .enum(["mobile", "web"])
+        .default("mobile")
+        .describe(
+          "Mobbin buckets collection items as 'mobile' (iOS + Android) or 'web'. " +
+            "Check the counts from mobbin_list_collections to pick the right one.",
+        ),
+      content_type: z
+        .enum(["apps", "screens", "flows"])
+        .optional()
+        .describe(
+          "Restrict to a single bucket (apps, screens, or flows). " +
+            "Required when paginating with `cursor`. Omit to fetch the first page of all three buckets.",
+        ),
+      page_size: z
+        .number()
+        .min(1)
+        .max(50)
+        .default(DEFAULT_PAGE_SIZE)
+        .describe("Items per bucket per call"),
+      cursor: z
+        .object({
+          last_created_at: z.string(),
+          last_id: z.string(),
+        })
+        .optional()
+        .describe(
+          "Keyset cursor from the previous response. Only valid when content_type is also set.",
+        ),
+    },
+    async ({ collection_id, platform, content_type, page_size, cursor }) => {
+      if (cursor && !content_type) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "cursor requires content_type — Mobbin pages each bucket independently.",
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const buckets: Array<"apps" | "screens" | "flows"> = content_type
+        ? [content_type]
+        : ["apps", "screens", "flows"];
+
+      const sections: string[] = [];
+      for (const bucket of buckets) {
+        const result = await client.getCollectionContents({
+          collectionId: collection_id,
+          contentType: bucket,
+          platformType: platform,
+          pageSize: page_size,
+          cursor: cursor ? { lastCreatedAt: cursor.last_created_at, lastId: cursor.last_id } : null,
+        });
+        const header = `## ${bucket} (${platform}) — ${result.items.length} item(s)${
+          result.nextCursor ? " (more available)" : ""
+        }`;
+        const body = formatCollectionItems(result.items);
+        const footer = result.nextCursor
+          ? `\n\n_To page further: call mobbin_get_collection with content_type="${bucket}" and ` +
+            `cursor={ last_created_at: "${result.nextCursor.lastCreatedAt}", last_id: "${result.nextCursor.lastId}" }._`
+          : "";
+        sections.push(`${header}\n\n${body}${footer}`);
+      }
+
+      return {
+        content: [{ type: "text", text: sections.join("\n\n---\n\n") }],
       };
     },
   );
