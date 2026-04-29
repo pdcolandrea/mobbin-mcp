@@ -1,10 +1,10 @@
 import {
   SUPABASE_URL,
-  SUPABASE_ANON_KEY,
   SUPABASE_COOKIE_PREFIX,
   TOKEN_REFRESH_BUFFER_SECONDS,
   COOKIE_CHUNK_SIZE,
 } from "../constants.js";
+import { anonKey } from "./anon-key.js";
 
 export interface SupabaseSession {
   access_token: string;
@@ -96,23 +96,26 @@ export class MobbinAuth {
   }
 
   private async doRefresh(): Promise<void> {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        refresh_token: this.session.refresh_token,
-      }),
-    });
+    let res = await this.callRefreshEndpoint(anonKey.get());
+
+    // Mobbin rotated their publishable key. Try to discover the new one and retry once.
+    if (res.status === 401) {
+      const body = await res.text().catch(() => "");
+      if (body.includes("Unregistered API key")) {
+        const recovered = await anonKey.rediscover();
+        if (recovered) {
+          res = await this.callRefreshEndpoint(recovered);
+        } else {
+          throw refreshFailureError(401, body);
+        }
+      } else {
+        throw refreshFailureError(401, body);
+      }
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(
-        `Token refresh failed (${res.status}): ${text.substring(0, 200)}. ` +
-          "Run 'npx mobbin-mcp auth' to re-authenticate.",
-      );
+      throw refreshFailureError(res.status, text);
     }
 
     const newSession = (await res.json()) as SupabaseSession;
@@ -122,6 +125,19 @@ export class MobbinAuth {
     if (this.onSessionRefreshed) {
       this.onSessionRefreshed(newSession);
     }
+  }
+
+  private async callRefreshEndpoint(apiKey: string): Promise<Response> {
+    return fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: apiKey,
+      },
+      body: JSON.stringify({
+        refresh_token: this.session.refresh_token,
+      }),
+    });
   }
 
   /**
@@ -192,4 +208,11 @@ export class MobbinAuth {
     }
     return chunks.map((chunk, i) => `${SUPABASE_COOKIE_PREFIX}.${i}=${chunk}`).join("; ");
   }
+}
+
+function refreshFailureError(status: number, body: string): Error {
+  return new Error(
+    `Token refresh failed (${status}): ${body.substring(0, 200)}. ` +
+      "Run 'npx mobbin-mcp auth' to re-authenticate.",
+  );
 }
