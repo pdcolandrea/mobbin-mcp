@@ -16,10 +16,14 @@ export const COLOR_QUANTIZE_MAX = 248;
 
 /**
  * Public publishable key embedded in Mobbin's client JS. Required for Supabase auth API calls.
+ * Used as the initial seed only — at runtime the live value is owned by `AnonKeyManager`,
+ * which prefers a previously-discovered key from disk and self-heals via
+ * `discoverPublishableKey()` on a refresh-time `401 "Unregistered API key"`.
+ *
  * To find this yourself: open mobbin.com, DevTools → Network → filter for "supabase" →
  * check the `apikey` header on any request to ujasntkfphywizsdaapi.supabase.co.
  */
-export const SUPABASE_ANON_KEY = "sb_publishable_LbI2-4spKrYx1xHKrI4YyQ_rC-csyUz";
+export const SUPABASE_ANON_KEY = "sb_publishable_YptnKskI90SD2g25sAvVxQ_tZltjYFE";
 
 /**
  * Cookie name prefix used by Supabase for this project.
