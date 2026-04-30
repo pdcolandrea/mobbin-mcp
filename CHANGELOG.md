@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.2.0...v1.3.0) (2026-04-29)
+
+
+### Features
+
+* self-heal Supabase publishable key on rotation ([#32](https://github.com/pdcolandrea/mobbin-mcp/issues/32)) ([#36](https://github.com/pdcolandrea/mobbin-mcp/issues/36)) ([369485b](https://github.com/pdcolandrea/mobbin-mcp/commit/369485b17fc46da460b22cf6a40b6701af4b04b0))
+
 ## [1.2.0](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.1.0...v1.2.0) (2026-04-27)
 
 
