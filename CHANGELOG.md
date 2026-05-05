@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.3.0...v1.3.1) (2026-05-05)
+
+
+### Bug Fixes
+
+* **schemas:** accept trimmed row shape from element/keyword-filtered search-screens ([#39](https://github.com/pdcolandrea/mobbin-mcp/issues/39)) ([a01de99](https://github.com/pdcolandrea/mobbin-mcp/commit/a01de99cdaa7d81c29b22cc88dce1c8406d1b416))
+
 ## [1.3.0](https://github.com/pdcolandrea/mobbin-mcp/compare/v1.2.0...v1.3.0) (2026-04-29)
 
 
