@@ -50,30 +50,51 @@ export const appResultSchema = z
   })
   .passthrough();
 
+/**
+ * Rows returned by `/api/content/search-screens`.
+ *
+ * Mobbin returns one of two shapes depending on the filter:
+ *   - **Full shape** (no filter, or filtered by `screenPatterns` / `appCategories`)
+ *     includes `screenNumber`, `screenKeywords`, `appCategory`, `allAppCategories`,
+ *     `appTagline`, `companyHqRegion`, `companyStage`, `popularityMetric`,
+ *     `trendingMetric`, and `metadata: { width, height }`.
+ *   - **Trimmed shape** (filtered by `screenElements` or `screenKeywords`)
+ *     omits all of the above and instead carries top-level `width`/`height`
+ *     plus `createdAt`.
+ *
+ * The optional fields below cover the trimmed shape; everything still required
+ * is present in both.
+ */
 export const screenResultSchema = z
   .object({
     type: z.string(),
     id: z.string(),
     screenUrl: z.string(),
     fullpageScreenUrl: z.string().nullable(),
-    screenNumber: z.number(),
     screenPatterns: z.array(z.string()),
     screenElements: z.array(z.string()),
-    screenKeywords: z.string(),
     appVersionId: z.string(),
     appId: z.string(),
     appName: z.string(),
-    appCategory: z.string(),
-    allAppCategories: z.array(z.string()),
     appLogoUrl: z.string(),
-    appTagline: z.string(),
-    companyHqRegion: z.string().nullable(),
-    companyStage: z.string().nullable(),
     platform: z.string(),
-    popularityMetric: z.number(),
-    trendingMetric: z.number(),
-    metadata: z.object({ width: z.number(), height: z.number() }).passthrough(),
     screenCdnImgSources: z.object({ src: z.string() }).passthrough().optional(),
+    // Full-shape-only fields — absent from element/keyword-filtered responses.
+    screenNumber: z.number().optional(),
+    screenKeywords: z.string().optional(),
+    appCategory: z.string().optional(),
+    allAppCategories: z.array(z.string()).optional(),
+    appTagline: z.string().optional(),
+    companyHqRegion: z.string().nullable().optional(),
+    companyStage: z.string().nullable().optional(),
+    popularityMetric: z.number().optional(),
+    trendingMetric: z.number().optional(),
+    metadata: z.object({ width: z.number(), height: z.number() }).passthrough().optional(),
+    // Trimmed-shape extras — top-level dimensions and timestamp Mobbin sends
+    // in lieu of `metadata`.
+    width: z.number().optional(),
+    height: z.number().optional(),
+    createdAt: z.string().optional(),
   })
   .passthrough();
 

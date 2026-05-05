@@ -38,21 +38,25 @@ export function formatApps(apps: AppResult[]): string {
 export function formatScreens(screens: ScreenResult[]): string {
   if (screens.length === 0) return "No screens found.";
 
-  const lines = screens.map((s, i) =>
-    [
+  const lines = screens.map((s, i) => {
+    // Element/keyword-filtered rows omit `metadata` and instead expose top-level
+    // `width`/`height`. Both shapes carry dimensions; pick whichever is present.
+    const width = s.metadata?.width ?? s.width;
+    const height = s.metadata?.height ?? s.height;
+    return [
       `### ${i + 1}. ${s.appName} — ${s.screenPatterns.join(", ") || "Screen"}`,
-      `- **App**: ${s.appName} (${s.appCategory})`,
+      `- **App**: ${s.appName}${s.appCategory ? ` (${s.appCategory})` : ""}`,
       `- **Platform**: ${s.platform}`,
       `- **Patterns**: ${s.screenPatterns.join(", ") || "None"}`,
       `- **Elements**: ${s.screenElements.join(", ") || "None"}`,
       `- **Screen URL**: ${s.screenUrl}`,
       `- **App ID**: ${s.appId}`,
       `- **Screen ID**: ${s.id}`,
-      s.metadata ? `- **Dimensions**: ${s.metadata.width}x${s.metadata.height}` : "",
+      width !== undefined && height !== undefined ? `- **Dimensions**: ${width}x${height}` : "",
     ]
       .filter(Boolean)
-      .join("\n"),
-  );
+      .join("\n");
+  });
 
   return truncate(lines.join("\n\n"));
 }
