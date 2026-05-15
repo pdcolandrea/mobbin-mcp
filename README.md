@@ -1,9 +1,11 @@
 # Mobbin MCP Server
 
-> [!IMPORTANT]
+> [!WARNING]
+> **This repository is archived and no longer maintained.**
+>
 > **Mobbin has released an official MCP server — use it instead: https://mobbin.com/mcp**
 >
-> This project was built before official MCP support existed, by reverse-engineering Mobbin's internal endpoints. Now that Mobbin maintains a first-party server, the official one is the recommended choice and will stay in sync with their platform.
+> This project was built before official MCP support existed, by reverse-engineering Mobbin's internal endpoints. Now that Mobbin maintains a first-party server, the official one is the recommended choice and will stay in sync with their platform. This repo is kept around for historical reference only; no further updates, bug fixes, or PRs will be accepted.
 
 An unofficial MCP server that connects to [Mobbin](https://mobbin.com) — the design inspiration platform with 600k+ screens from 1,100+ apps. Search apps, browse screenshots, explore user flows, and access your saved collections directly from Claude.
 
