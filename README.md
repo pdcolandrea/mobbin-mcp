@@ -1,5 +1,10 @@
 # Mobbin MCP Server
 
+> [!IMPORTANT]
+> **Mobbin has released an official MCP server — use it instead: https://mobbin.com/mcp**
+>
+> This project was built before official MCP support existed, by reverse-engineering Mobbin's internal endpoints. Now that Mobbin maintains a first-party server, the official one is the recommended choice and will stay in sync with their platform.
+
 An unofficial MCP server that connects to [Mobbin](https://mobbin.com) — the design inspiration platform with 600k+ screens from 1,100+ apps. Search apps, browse screenshots, explore user flows, and access your saved collections directly from Claude.
 
 Mobbin has no public API. This server was built by reverse-engineering their internal endpoints.
